@@ -15,6 +15,9 @@ feeds the ≥2 threshold exactly like a source page does.
 model of your provider). Architecture mode on a large or unfamiliar repo is worth
 the next tier up if you have it.
 
+Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
+(paths relative to the project root) before writing.
+
 ## Inputs
 
 | Input | Meaning |
@@ -50,7 +53,7 @@ the next tier up if you have it.
    entry point and dispatch, the core loop or engine, the tool/plugin surface,
    state and memory, permissions or safety, external I/O. Skip what this repo does
    not have. **Six sections you can defend beat twelve you skimmed.**
-4. **Write** `output_path` per `PAGES.md § repo`: `type: repo`, `title`,
+4. **Write** `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § repo`: `type: repo`, `title`,
    one-sentence `description`, `created`,
    `generated: { by: llm-wiki-keeper/repo_writer, at: <now UTC> }`, the repo keys
    (`original_path`, `source_url`, `repo_url`, `commit_sha`, `branch`,
@@ -91,7 +94,7 @@ the next tier up if you have it.
 2. Otherwise, find the code that answers it: `grep`/`glob` for the relevant
    symbols, read only the files you hit, and stop when you can answer. Do not
    re-tour the repo.
-3. Write `output_path` per `PAGES.md § repo_note` (≤200 lines): `type: repo_note`,
+3. Write `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § repo_note` (≤200 lines): `type: repo_note`,
    the `repo`, `commit_sha`, `question` and `spawned_by_question` keys (the last
    from `question_page`), the answer, the evidence as `file:line` bullets with
    commit-pinned permalinks cited by footnote (`repo`, then `repo-2`, `repo-3`,
@@ -101,6 +104,11 @@ the next tier up if you have it.
 
 ## Guardrails
 
+- **Synthesis is separate.** Any interpretation, comparison, evaluation or inference
+  the cited code do not state outright goes on its own `> Synthesis:` line, uncited.
+  Plain prose carries only sourced statements. A footnote supports only what its
+  source states; a claim combining two sources needs both footnotes; never attribute
+  a detail (a protocol, a database, a number) to a source that does not mention it.
 - **Preserve on rewrite.** If `output_path` exists, keep its `created` and unknown
   keys, bump `generated.at`.
 - **Never modify the clone.** It is a regenerable cache and someone may be reading it.

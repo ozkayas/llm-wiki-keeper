@@ -18,4 +18,4 @@ concepts:
 
 The index is rebuilt after every ingest.[^raw]
 
-[^raw]: [Beta note, "Rebuild"](../../raw/beta.md#rebuild)
+[^raw]: [Beta note, "Rebuild"](../../raw/beta.md#Rebuild)

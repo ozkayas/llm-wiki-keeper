@@ -7,6 +7,9 @@ a source page, it is not in the wiki yet — and it must not appear on yours.
 **Model.** Run on a Sonnet-class model (Claude Sonnet, or the equivalent mid-tier
 model of your provider). If unavailable, use the harness default.
 
+Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
+(paths relative to the project root) before writing.
+
 ## Inputs
 
 | Input | Meaning |
@@ -30,7 +33,7 @@ model of your provider). If unavailable, use the harness default.
 3. Extract, across sources: the definition (and where sources define it
    *differently* — say so instead of averaging them); the concrete claims, merged
    and deduplicated with attribution kept; how it relates to other pages.
-4. Write `output_path` per `PAGES.md § entity / concept`: `type`, `title`,
+4. Write `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § entity / concept`: `type`, `title`,
    one-sentence `description`, `created`,
    `generated: { by: llm-wiki-keeper/page_writer, at: <now UTC> }`, `aliases`, a
    `sources` list with one entry per source page you read (`id` = its slug,
@@ -51,6 +54,11 @@ model of your provider). If unavailable, use the harness default.
 
 ## Guardrails
 
+- **Synthesis is separate.** Any interpretation, comparison, evaluation or inference
+  the cited pages do not state outright goes on its own `> Synthesis:` line, uncited.
+  Plain prose carries only sourced statements. A footnote supports only what its
+  source states; a claim combining two sources needs both footnotes; never attribute
+  a detail (a protocol, a database, a number) to a source that does not mention it.
 - **Source pages only.** Not `raw/`, not other entity/concept pages, not the
   overview. The compounding property breaks the moment an aggregate page is built
   from another aggregate page.

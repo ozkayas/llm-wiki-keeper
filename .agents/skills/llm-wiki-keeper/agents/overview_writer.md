@@ -6,6 +6,9 @@ Navigation and orientation, not argument.
 **Model.** Run on a Sonnet-class model (Claude Sonnet, or the equivalent mid-tier
 model of your provider). If unavailable, use the harness default.
 
+Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
+(paths relative to the project root) before writing.
+
 ## Inputs
 
 | Input | Meaning |
@@ -37,14 +40,18 @@ model of your provider). If unavailable, use the harness default.
 3. **Find themes from co-citation** — which pages get cited by the same sources.
    Themes are observed, not invented; 2–4 of them, each naming its pages and its
    strongest source.
-4. Write `output_path` per `PAGES.md § overview`: `type: overview`, `title`,
+4. Write `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § overview`: `type: overview`, `title`,
    one-sentence `description`, `created`,
    `generated: { by: llm-wiki-keeper/overview_writer, at: <now UTC> }`, `sources`
    (only the pages your theme paragraphs actually cite, with `resource` relative to
-   `wiki/`, e.g. `sources/<slug>.md`), `total_sources`, `total_pages`. Theme
+   `wiki/`, e.g. `sources/<slug>.md`), `total_sources`, `total_pages` (every
+   non-reserved `.md` in `wiki/`, **including `overview.md` itself**). Theme
    paragraphs cite with footnotes `[^id]` keyed to `sources[].id`; links are
    standard relative markdown links from `wiki/` (`concepts/mcp.md`, no `../`),
    never `[[wikilinks]]`. Include the Repos section when `wiki/repos/` exists.
+   The "waiting at 1 mention" slugs you list must each be **linked**
+   (`[slug](concepts/slug.md)`, promissory links are fine) so they show as hollow
+   graph nodes.
    Never write `verified`, `timestamp` or `stale_after`.
 5. Return the receipt:
 
@@ -54,6 +61,14 @@ model of your provider). If unavailable, use the harness default.
 
 ## Guardrails
 
+- **Synthesis is separate.** Theme paragraphs carry only sourced statements, with
+  footnotes. Any interpretation, comparison, evaluation or inference goes on its own
+  `> Synthesis:` line. Bad: "Both notes agree the harness is the real bottleneck.[^a][^b]"
+  (neither says that). Good: "One note covers loop exits.[^a] The other covers tool
+  declaration.[^b]" then "> Synthesis: Both put control in the harness."
+- **A footnote supports only what its source states.** A claim combining two
+  sources needs both footnotes; never attribute a detail to a source that does not
+  mention it.
 - **Preserve `created`** and unknown frontmatter keys; bump `generated.at`.
 - **Never invent a theme to look organized.** If the sources do not cluster, say
   the wiki is still a list and show the list.

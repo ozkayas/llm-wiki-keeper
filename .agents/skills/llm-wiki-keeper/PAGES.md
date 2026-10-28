@@ -17,6 +17,8 @@ relative markdown links, one-sentence `description`, ISO-8601 instants) live in
 - Frontmatter path values are bundle-relative (`/concepts/mcp.md`); body links are
   relative to the page (`../concepts/mcp.md`).
 - Claims carry a footnote `[^id]` whose id is a `sources[].id`; `> Synthesis:` lines carry none.
+- **Synthesis.** Any interpretation, comparison, evaluation or inference that the cited material does not state outright goes on its own line starting `> Synthesis:`, on every page type including overview and notes. Plain prose carries only sourced statements. A footnote supports only what its source states; a claim that combines two sources needs both footnotes; never attribute a detail (a protocol, a database, a number) to a source that does not mention it.
+- **Anchors point at the heading text, percent-encoded, as Obsidian expects** (not a GitHub slug): `../../raw/my-note.md#6.%20Building%20the%20Server`. Spaces become `%20`, other characters stay as in the heading, and `)` and `%` are encoded too (`%29`, `%25`).
 - Receipts keep their field names. They never held wikilinks or timestamps, so none changed.
   `page` is a path relative to `wiki-<slug>/`.
 
@@ -60,7 +62,8 @@ concepts:
 ## Summary
 
 <2–3 paragraphs in the author's own framing — what this note argues, explains or
-demonstrates. Not a generic restatement of the topic.>
+demonstrates. Not a generic restatement of the topic. Every paragraph ends with
+a footnote.[^raw]>
 
 ## Key claims
 
@@ -70,7 +73,7 @@ demonstrates. Not a generic restatement of the topic.>
 ## Notable quotes
 
 > "<verbatim, ≤3 sentences>"
-> — [<heading>](../../raw/<slug>.md#<heading>)
+> — [<heading>](../../raw/<slug>.md#<Heading%20text>)
 
 ## Connections
 
@@ -79,12 +82,18 @@ demonstrates. Not a generic restatement of the topic.>
 
 > Synthesis: <one line — how this note sits against the rest of the wiki>
 
-[^raw]: [<title>, "<heading>"](../../raw/<slug>.md#<heading>)
+[^raw]: [<title>, "<heading>"](../../raw/<slug>.md#<Heading%20text>)
 ```
 
-Several claims from the same heading reuse `[^raw]`; for claims from different
-headings, the footnote text of the single `[^raw]` definition names the main
-heading and the others are linked inline: `[heading](../../raw/<slug>.md#heading)`.
+Several claims from the same heading reuse `[^raw]`. For claims from different
+headings, keep the single label and list the anchors inside its one definition:
+`[^raw]: [Section 3](../../raw/<slug>.md#3.%20X), [Section 5](../../raw/<slug>.md#5.%20Y)`.
+The label stays unique.
+
+**Large notes.** When the raw file is longer than about 15 KB or has more than 6
+top-level headings, the page must cover **every** top-level section in at least one
+sentence, and cite each claim with a footnote anchored at the section it came from.
+The 300–600 word budget stretches as far as that needs, no further.
 
 **Budget** 300–600 words. A thin note gets a thin page; padding is worse than brevity.
 **Only the source page may read `raw/`.** Everything downstream reads this page instead.
@@ -122,7 +131,7 @@ concepts:
 ## Summary
 
 The author argues that an agent loop is only as good as its exit condition, and
-shows three runs where a missing budget turned a ten-minute task into an hour.
+shows three runs where a missing budget turned a ten-minute task into an hour.[^raw]
 
 ## Key claims
 
@@ -132,7 +141,7 @@ shows three runs where a missing budget turned a ten-minute task into an hour.
 ## Notable quotes
 
 > "The loop is not the hard part. Knowing when to stop is."
-> — [Stopping](../../raw/agent-loops.md#stopping)
+> — [Stopping](../../raw/agent-loops.md#Stopping)
 
 ## Connections
 
@@ -141,7 +150,7 @@ shows three runs where a missing budget turned a ten-minute task into an hour.
 
 > Synthesis: Complements the MCP note by showing where tool errors surface in the loop.
 
-[^raw]: [Agent loops in practice, "Stopping"](../../raw/agent-loops.md#stopping)
+[^raw]: [Agent loops in practice, "Stopping"](../../raw/agent-loops.md#Stopping)
 ```
 
 **Receipt**
@@ -252,7 +261,7 @@ source_count: 2
 ## Definition
 
 Both notes treat MCP as the harness side of tool use: the harness, not the model,
-connects to servers and exposes their tools.
+connects to servers and exposes their tools.[^agent-loops][^tool-servers]
 
 ## Key claims
 
@@ -294,7 +303,7 @@ sources:
     resource: sources/<page-slug>.md     # or concepts/..., entities/...
     title: <page title>
 total_sources: <int>
-total_pages: <int>
+total_pages: <int>                   # every non-reserved .md in wiki/, overview.md itself included
 ---
 
 # <slug> — Overview
@@ -304,7 +313,8 @@ total_pages: <int>
 <2–4 clusters that the wiki has actually organized around — derived from
 co-citation (which pages get cited together), not invented. Each theme: one
 short paragraph with footnotes, 1–3 linked entity/concept pages, and the 1–2
-source pages that make the case best.>
+source pages that make the case best. Which pages cluster is observed; why, or
+what they have in common, goes on a `> Synthesis:` line.>
 
 ## Index
 
@@ -320,8 +330,12 @@ source pages that make the case best.>
 ## Health
 
 - Sources: N · Entities: N · Concepts: N
-- Slugs at 1 mention (waiting for a second): <slug>, <slug>
+- Slugs at 1 mention (waiting for a second): [<slug>](concepts/<slug>.md), [<slug>](entities/<slug>.md)
 ```
+
+The overview must **link** every waiting slug it lists (a promissory link is fine),
+so each shows as a hollow node in the graph. `total_pages` counts every
+non-reserved `.md` in `wiki/`, including `overview.md` itself.
 
 `sources` lists the pages the theme paragraphs actually cite through footnotes
 (not every page that appears in the Index or Health lists); each id has a
@@ -354,16 +368,18 @@ sources:
     resource: sources/tool-servers.md
     title: Writing tool servers
 total_sources: 2
-total_pages: 5
+total_pages: 6
 ---
 
 # ai-notes — Overview
 
 ## Themes
 
-**Tools and loops.** Both notes agree that the harness owns the loop and the tool
-connection.[^agent-loops][^tool-servers] The wiki organizes around [MCP](concepts/mcp.md)
-and the [Agent loop](concepts/agent-loop.md).
+**Tools and loops.** One note covers the loop and its exit condition.[^agent-loops]
+The other covers how a server declares its tools.[^tool-servers] The wiki
+organizes around [MCP](concepts/mcp.md) and the [Agent loop](concepts/agent-loop.md).
+
+> Synthesis: Both notes place the loop and the tool connection in the harness.
 
 ## Index
 
@@ -377,7 +393,7 @@ and the [Agent loop](concepts/agent-loop.md).
 ## Health
 
 - Sources: 2 · Entities: 1 · Concepts: 2
-- Slugs at 1 mention (waiting for a second): context-window
+- Slugs at 1 mention (waiting for a second): [context-window](concepts/context-window.md)
 
 [^agent-loops]: [Agent loops in practice](sources/agent-loops.md)
 [^tool-servers]: [Writing tool servers](sources/tool-servers.md)

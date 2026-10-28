@@ -8,6 +8,9 @@ your page instead of the raw file. If your page is thin, the whole wiki is thin.
 **Model.** Run on a Sonnet-class model (Claude Sonnet, or the equivalent mid-tier
 model of your provider). If unavailable, use the harness default.
 
+Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
+(paths relative to the project root) before writing.
+
 ## Inputs
 
 | Input | Meaning |
@@ -15,7 +18,7 @@ model of your provider). If unavailable, use the harness default.
 | `raw_path` | The raw file to read, e.g. `wiki-<slug>/raw/article-foo.md`. The only file you read for content. |
 | `original_path` | Provenance — the path or URL as the user gave it. Copy it verbatim into frontmatter. |
 | `origin` | `local`, `article` or `youtube`. |
-| `metadata` | The adapter's receipt: `title`, `source_url`, `authors`, `published_date`. Canonical — do not invent or "improve" it. |
+| `metadata` | The adapter's receipt: `title`, `source_url`, `authors`, `published_date`. Canonical — do not invent or "improve" it. **All keys are optional for local notes** (the orchestrator never reads `raw/`): derive the title from the first H1, else the filename stem. |
 | `existing_entities` / `existing_concepts` | Lists of `{slug, title}` already in the wiki. Reuse these slugs instead of inventing near-duplicates. |
 | `output_path` | Where to write, e.g. `wiki-<slug>/wiki/sources/<slug>.md`. |
 | `language` | Page language, from `config.yml` (e.g. `en`). Write all prose in it. Slugs, keys and code stay as specified. |
@@ -32,9 +35,10 @@ model of your provider). If unavailable, use the harness default.
    only if the source *engages* with it. A passing mention is not engagement, and
    every link you write is a vote toward materializing a page. Match
    `existing_entities` / `existing_concepts` by slug first; a new slug must follow
-   the discipline in `CONVENTIONS.md` §3 (lowercase kebab-case, ASCII, ≤60 chars,
-   the slug the page will actually use).
-4. **Write the page** at `output_path`, following `PAGES.md § source` exactly:
+   the discipline in `.agents/skills/llm-wiki-keeper/CONVENTIONS.md` §3 (lowercase; every run of non-alphanumeric
+   characters becomes one `-`; strip leading/trailing `-`; ASCII only; ≤60 chars, cut at a `-`; so
+   `CLAUDE.md` is `claude-md`).
+4. **Write the page** at `output_path`, following `.agents/skills/llm-wiki-keeper/PAGES.md § source` exactly:
    `type: source`, `title`, one-sentence `description`, `created`,
    `generated: { by: llm-wiki-keeper/source_writer, at: <now UTC> }`, a `sources`
    list (`id: raw` pointing at the raw file; for `article` origin a second entry
@@ -42,8 +46,10 @@ model of your provider). If unavailable, use the harness default.
    (`/entities/<slug>.md`). Body links are standard relative markdown links
    (`../concepts/<slug>.md`), never `[[wikilinks]]`. Every claim carries a footnote
    `[^raw]` (or `[^web]`) defined at the end of the page and linking the raw file
-   with a heading anchor when it has headings. Your own judgment goes on the
-   single `> Synthesis:` line, uncited, and nowhere else. Never write `verified`
+   with a **heading-text anchor**, percent-encoded as Obsidian expects
+   (`#6.%20Building%20the%20Server`, not a slug; encode `)` and `%` too), when it
+   has headings. Every summary paragraph carries a footnote. Your own judgment
+   goes on `> Synthesis:` lines, uncited, and nowhere else (see Guardrails). Never write `verified`
    or `timestamp`. Omit `stale_after` unless the orchestrator supplied one in
    `metadata`; then copy it verbatim.
 5. **Return the receipt** — one JSON object, nothing else:
@@ -64,10 +70,23 @@ becomes `mcp`), including promissory links to pages that do not exist yet.
 
 ## Guardrails
 
+- **Cover large notes.** When the raw file is longer than about 15 KB or has more
+  than 6 top-level headings, cover **every** top-level section in at least one
+  sentence and cite each claim with a footnote anchored at the section it came
+  from. One label (`[^raw]`) pointing at several sections lists the anchors inside
+  its single definition: `[^raw]: [Section 3](...#3.%20X), [Section 5](...#5.%20Y)`.
+- **Synthesis is separate.** Any interpretation, comparison, evaluation or
+  inference the raw file does not state outright goes on its own line starting
+  `> Synthesis:`. Plain prose carries only what the source says. Bad: "The author
+  clearly prefers SQLite for speed.[^raw]" (the source only lists SQLite). Good:
+  "The author lists SQLite as the storage option.[^raw]" then
+  "> Synthesis: The choice suggests a local-first design."
+- **A footnote supports only what its source states.** Never attribute a detail
+  (a protocol, a database, a number) to a source that does not mention it.
 - **One file.** Write `output_path` and nothing else. Never touch `raw/`, another
   source page, the index, or `log.md`.
 - **No floating claims.** Every claim either carries a footnote citing the raw file
-  or is the `> Synthesis:` line.
+  or sits on a `> Synthesis:` line.
 - **Be faithful, not generous.** If the note is a three-line stub, write a
   three-line page. A thin note honestly summarized is a useful signal; a padded
   page is noise that every downstream reader pays for.

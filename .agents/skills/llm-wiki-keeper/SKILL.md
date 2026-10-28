@@ -19,7 +19,9 @@ The wiki is an Open Knowledge Format **v0.2** bundle (`wiki/`), with user
 preferences in `wiki-<slug>/config.yml`. A lint mode is planned; it does not exist
 yet, so do not offer it.
 
-Four files carry the contract, and you follow them exactly:
+Four files carry the contract, and you follow them exactly (they live in
+`.agents/skills/llm-wiki-keeper/`, relative to the project root; every agent prompt
+you write must name them by that full path):
 
 - `CONVENTIONS.md` — layout, identity, threshold, links, log, config, OKF, write regimes.
 - `PAGES.md` — the template and receipt for every page type.
@@ -51,6 +53,10 @@ written in; whether tags are `optional` or `forbidden`; and `stale_after_days`
 (default 60). Then write `wiki-<slug>/config.yml` per `CONVENTIONS.md` §10a with
 the answers (defaults for anything left unanswered) and never ask again.
 
+If your harness has **no ask-user capability** (for example you are yourself a
+subagent), do not ask: use the defaults, write `config.yml`, and say in your report
+that the defaults were used because the user could not be asked.
+
 ```bash
 mkdir -p wiki-<slug>/raw wiki-<slug>/wiki/sources wiki-<slug>/wiki/entities wiki-<slug>/wiki/concepts
 uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py \
@@ -76,7 +82,10 @@ one, whatever your harness calls it:
 
 1. Read `agents/<name>.md`.
 2. Pass its **entire body as the subagent's prompt**, followed by the inputs its
-   Inputs table lists, as plain `key: value` lines.
+   Inputs table lists, as plain `key: value` lines. When the subagent can read
+   files, you may instead pass the agent file's path
+   (`.agents/skills/llm-wiki-keeper/agents/<name>.md`) plus the inputs, and tell it
+   to follow that file; this is cheaper. Pasting the whole body stays the fallback.
 3. Run it on a Sonnet-class model (or your provider's equivalent mid-tier model;
    fall back to the harness default). The agent file states its own preference.
 4. Run them **in parallel** when your harness supports it, sequentially when it
@@ -127,15 +136,16 @@ Expand every path the user gave you:
 
 For each input compute its raw path from the routing table — for a local note
 `raw/<slug>.md`, where `<slug>` is the **filename stem**, slugified: lowercase,
-every run of non-alphanumeric characters collapsed to a single `-`,
-leading/trailing `-` stripped, truncated to 60 characters at a `-` boundary. The
+every run of non-alphanumeric characters (dots and punctuation included)
+collapsed to a single `-`, leading/trailing `-` stripped, ASCII only, truncated to
+60 characters at a `-` boundary (`CLAUDE.md` is `claude-md`). The
 adapters derive their own slugs the same way, from the URL's last path segment or
 from `<owner>-<repo>`.
 
 Then split the inputs (this is the whole of dedup — see `CONVENTIONS.md` §4):
 
 ```bash
-ls wiki-<slug>/raw/ wiki-<slug>/raw/repos/     # everything already ingested, by identity
+ls wiki-<slug>/raw/ 2>/dev/null; ls wiki-<slug>/raw/repos/ 2>/dev/null   # everything already ingested, by identity
 ```
 
 - raw path exists → **skipped**. Report the input by name plus the
@@ -170,6 +180,9 @@ uv run --script .agents/skills/llm-wiki-keeper/scripts/clone_repo.py \
 
 Keep each receipt — the writers need `original_path`, `title`, `source_url`,
 `authors`, `published_date`, and for repos `clone_path`, `commit_sha`, `branch`.
+A **local note has no adapter receipt beyond `original_path` and the raw path**: you
+never read `raw/`, so the `source_writer` derives the title from the first H1, else
+the filename stem.
 If an article receipt carries a `warning`, surface it and do not write a source
 page from a paywall stub.
 
@@ -195,10 +208,10 @@ writers produced — the receipt is the interface.
 ### 1.4 Ingest tail — entity and concept pages
 
 ```bash
-uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>
+uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug> 2>/dev/null
 ```
 
-The `qualifying` lists are the slugs at ≥2 distinct source-like pages — now
+Add `2>/dev/null` when you only need the JSON (the table goes to stderr). The `qualifying` lists are the slugs at ≥2 distinct source-like pages — now
 counted across `wiki/sources/` **and** `wiki/repos/*/`, so a repo can be one of the
 two sources that materialize a concept.
 
@@ -235,7 +248,10 @@ uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir 
 ```
 
 Links in log text are relative to `wiki/log.md` (`sources/a.md`, no leading `..`).
-The overview rewrite in 1.5 is its own entry, op `Update`.
+One call with several `--text` produces **one bullet line per `--text`**, all under
+the same bold op word (`**Ingest**`), in the given order.
+The overview rewrite in 1.5 is logged by a **separate `Update` call made after the
+`Ingest` call**, so `Update` shows above `Ingest` in the newest-first log. That is expected.
 
 ### 1.7b Check the open questions
 

@@ -82,7 +82,7 @@ Per-claim attribution in the body is a footnote whose label is a `sources[].id`:
 ```markdown
 The index is rebuilt after every ingest.[^raw]
 
-[^raw]: [My note, "Rebuild"](../../raw/my-note.md#rebuild)
+[^raw]: [My note, "Rebuild"](../../raw/my-note.md#Rebuild)
 ```
 
 The label is the join key into `sources`. Put the heading anchor in the footnote text, not in the label.
@@ -107,7 +107,7 @@ Repo pages: `{ id: repo, resource: https://github.com/<owner>/<repo>/tree/<sha>,
 ## 5. Links: standard markdown, relative
 
 - **Wiki to wiki and wiki to raw:** standard markdown links with a **relative path** and the `.md` extension:
-  `[MCP](../concepts/mcp.md)`, `[note](../../raw/my-note.md#heading)`.
+  `[MCP](../concepts/mcp.md)`, `[note](../../raw/my-note.md#Heading%20Text)`.
   Why relative and not OKF's recommended bundle-absolute `/concepts/mcp.md`: Obsidian resolves `/` against the vault
   root, and the vault is often the project root, not `wiki/`. A relative link works from either.
 - **Frontmatter lists** `entities:` / `concepts:` hold the bundle-relative path (starts with `/`, ends in `.md`).
@@ -199,3 +199,14 @@ automatically. The skill may read it, but anything it rewrites follows this docu
 8. Root `index.md` layout is the script's: `# Pages` (overview, open-questions) and `# Browse` (one line per subdirectory). Subdirectory indexes carry no frontmatter and no marker comment.
 9. `verified[].by` accepts `human:<id>`, `process:<id>` or `<producer>/<version>`.
 10. Timestamps must be full ISO 8601 datetimes with an offset. A date-only `created` is a warning.
+
+## 12. Decisions after the first end-to-end run
+
+These supersede any earlier text in this file or elsewhere.
+
+1. **Anchors are heading text, percent-encoded** (Obsidian-first), not GitHub slugs: `../../raw/my-note.md#6.%20Building%20the%20Server`. Spaces become `%20`, other characters stay, `)` and `%` are encoded. `build_index_md.py` has no anchor check, so nothing changed there.
+2. **Synthesis is separate on every page type** (overview and notes included). Interpretation, comparison, evaluation or inference the cited material does not state goes on its own `> Synthesis:` line. Plain prose carries only sourced statements. A footnote supports only what its source states; a claim combining two sources needs both footnotes; no detail is attributed to a source that does not mention it.
+3. **Large notes** (raw file over about 15 KB or more than 6 top-level headings): the source page covers every top-level section in at least one sentence and anchors each footnote at its section. One `[^raw]` label may list several anchors inside its single definition. Every summary paragraph on a source page carries a footnote.
+4. **Slug rule:** lowercase; every run of non-alphanumeric characters (dots and punctuation included) becomes one `-`; strip leading and trailing `-`; ASCII only; at most 60 characters, truncated at a `-` boundary. `CLAUDE.md` is `claude-md`.
+5. **Orchestration:** (a) with no ask-user capability, Step 0 uses the defaults, writes `config.yml` and says so in the report; (b) the dedup command is `ls wiki-<slug>/raw/ 2>/dev/null; ls wiki-<slug>/raw/repos/ 2>/dev/null`; (c) `metadata` keys are optional for local notes, the writer derives the title from the first H1, else the filename stem, and the local-note receipt is only `original_path` and the raw path; (d) agent prompts name `PAGES.md` and `CONVENTIONS.md` by full path `.agents/skills/llm-wiki-keeper/...`, relative to the project root; (e) the orchestrator may pass an agent file's path plus inputs instead of pasting the body when the subagent can read files; (f) run `count_mentions.py` with `2>/dev/null` when only the JSON is needed; (g) several `--text` give one bullet per `--text` under one op word, and the overview rewrite is a separate `Update` call after `Ingest`, so it sits above it; (h) the overview's `total_pages` counts every non-reserved `.md` in `wiki/`, `overview.md` included, and the overview links the slugs waiting at 1 mention.
+6. **Known limitations** are listed at the end of `CONVENTIONS.md`: Properties panel and nested YAML, provenance per section, text anchors not scrolling on GitHub.

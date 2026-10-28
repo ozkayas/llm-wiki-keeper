@@ -81,9 +81,11 @@ mentioning it is a fact about your knowledge, and that is what earns a page.
 **Promissory links.** A source-like page may link `[MCP](../concepts/<slug>.md)`
 in its body before the page exists (OKF tolerates broken links). Obsidian renders
 the unresolved target and it resolves the day the second mention lands. The price
-is **slug discipline**: lowercase kebab-case, ASCII, punctuation stripped, ≤60
-chars — the slug the eventual page will use. `agent-loop`, not `Agent Loops` or
-`agentic_loop`.
+is **slug discipline**: lowercase; every run of non-alphanumeric characters
+(dots and punctuation included) becomes one `-`; strip leading and trailing `-`;
+ASCII only; at most 60 characters, truncated at a `-` boundary. This is the slug
+the eventual page will use. `agent-loop`, not `Agent Loops` or `agentic_loop`;
+`CLAUDE.md` is `claude-md`.
 
 ## 4. Identity and dedup
 
@@ -181,10 +183,11 @@ Full per-type contracts: `PAGES.md`.
 
 - Wiki → wiki and wiki → raw use a **relative path with the `.md` extension**,
   resolved from the page that contains the link: `[MCP](../concepts/mcp.md)`,
-  `[note](../../raw/foo.md#heading)`. Relative, not OKF's bundle-absolute form,
+  `[note](../../raw/foo.md#Heading%20Text)`. Relative, not OKF's bundle-absolute form,
   because Obsidian resolves `/` against the vault root and the vault is often the
   project root, not `wiki/`. A relative link works from either.
 - Link text is a human title, never the path.
+- **Anchors point at the heading text, percent-encoded, as Obsidian expects** (not a GitHub slug): `../../raw/my-note.md#6.%20Building%20the%20Server`. Spaces become `%20`, other characters stay as in the heading, and `)` and `%` are encoded too (`%29`, `%25`).
 - External links: `[title](https://...)`.
 - Frontmatter path lists (§5) are the one place bundle-relative `/x.md` is used.
 
@@ -202,10 +205,14 @@ key: a footnote label must equal a `sources[].id`.
   ```markdown
   The index is rebuilt after every ingest.[^raw]
 
-  [^raw]: [My note, "Rebuild"](../../raw/my-note.md#rebuild)
+  [^raw]: [My note, "Rebuild"](../../raw/my-note.md#Rebuild)
   ```
 
-  Several claims from one raw file reuse `[^raw]`.
+  Several claims from one raw file reuse `[^raw]`. When the one label must point
+  at several sections, list the anchors inside the single definition:
+  `[^raw]: [Section 3](../../raw/my-note.md#3.%20X), [Section 5](../../raw/my-note.md#5.%20Y)`.
+  The label stays unique. For a large raw file, `source_writer` cites each claim at
+  the section it came from (`PAGES.md § source`).
 - **Entity / concept / repo / overview / note pages**: one entry per page drawn
   from, `id` = that page's slug, `resource` = relative path
   (`../sources/my-note.md`). Claims are `[^my-note]` with the definition
@@ -213,7 +220,10 @@ key: a footnote label must equal a `sources[].id`.
 - **Repo pages**: entry `{ id: repo, resource: https://github.com/<owner>/<repo>/tree/<sha>, title }`;
   code claims keep their commit-pinned permalink style.
 - LLM judgment is never laundered as a sourced claim. It goes on its own line,
-  prefixed `> Synthesis:`, and carries no footnote.
+  prefixed `> Synthesis:`, and carries no footnote, on every page type.
+- A footnote supports only what its source states. A claim that combines two
+  sources needs both footnotes. Never attribute a detail (a protocol, a database,
+  a number) to a source that does not mention it.
 - Every footnote label resolves to a `sources` entry and every `sources` entry is
   cited at least once. Only entity/concept cross-references may be promissory (§3).
 
@@ -266,6 +276,10 @@ first, grouped by ISO date:
 - New entries go **at the top of the current day's group**; a new day opens a new
   `## YYYY-MM-DD` heading directly under `# Log`. Never edit or delete an old entry.
 - Agents never edit `log.md` by hand; `scripts/append_log.py` does the insertion.
+- One call with several `--text` produces one bullet line per `--text`, all under
+  the same bold op word, in the given order.
+- The overview rewrite is logged by a separate `Update` call made after the
+  `Ingest` call, so `Update` sits above `Ingest` in a newest-first log. That is expected.
 - Greppable: `grep -E '^## [0-9]{4}-' wiki/log.md`.
 
 <!-- changed in keeper: OKF 0.2 -->
@@ -447,3 +461,13 @@ Three rules keep this layer from turning into a chat log:
 Query-path pages (`questions/`, `notes/`, `open-questions.md`) carry
 `generated.by: llm-wiki-keeper/orchestrator`; a repo note carries
 `llm-wiki-keeper/repo_writer`. Each query appends one `**Query**` entry to the log.
+
+---
+
+## 15. Known limitations
+
+1. Obsidian's Properties panel cannot edit nested YAML such as `generated` and
+   `sources`. The YAML is valid and the bundle conforms to OKF 0.2; edit those keys
+   in source mode.
+2. Provenance is per section, not per sentence.
+3. Text anchors do not scroll on GitHub. They do in Obsidian.

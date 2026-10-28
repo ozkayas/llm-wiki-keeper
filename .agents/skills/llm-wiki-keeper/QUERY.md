@@ -57,7 +57,11 @@ Answer from the wiki pages you read. Then decide what to keep:
 2. **Write or enrich a note only when the answer earned it** — the answer cited
    **≥2 wiki pages**, or the user said "save this". Otherwise the question page
    alone is the record. Most questions are conversational and should not compound.
-3. **Idempotency**: if a note on the same topic exists, *enrich it in place* —
+3. **Synthesis stays separate.** In notes, plain prose carries only statements a
+   cited wiki page makes, with footnotes. Any interpretation, comparison, evaluation
+   or inference goes on its own `> Synthesis:` line. A claim combining two pages
+   needs both footnotes. See `.agents/skills/llm-wiki-keeper/PAGES.md`.
+4. **Idempotency**: if a note on the same topic exists, *enrich it in place* —
    append to `spawned_by_question`, merge the new material into the existing
    structure, add `sources` entries (and footnotes) for newly cited pages, bump
    `generated.at`, keep `created`. A repeat question produces a second
@@ -137,7 +141,8 @@ uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir 
 ```
 
 Links in log text are relative to `wiki/log.md`. If the ingest tail ran (repo
-path), its own `Ingest`/`Update` entries are logged as in `SKILL.md` 1.7.
+path), its own `Ingest`/`Update` entries are logged as in `SKILL.md` 1.7. Several
+`--text` give one bullet each, under the same op word.
 
 Then answer the user:
 
