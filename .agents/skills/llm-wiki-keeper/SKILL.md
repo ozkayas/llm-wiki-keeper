@@ -1,5 +1,5 @@
 ---
-name: 03-llm-wiki-interactive
+name: llm-wiki-keeper
 description: "Build and query an LLM-maintained wiki that learns from being used — questions, notes and repo answers land back in the graph (modes: ingest, query)."
 ---
 
@@ -146,11 +146,11 @@ mkdir -p "wiki-<slug>/raw/assets"
 cp "<dir of the input note>/assets/<embedded file>" "wiki-<slug>/raw/assets/"   # skip if it exists
 
 # article
-uv run --script .agents/skills/03-llm-wiki-interactive/scripts/fetch_article.py \
+uv run --script .agents/skills/llm-wiki-keeper/scripts/fetch_article.py \
   --url "<url>" --wiki-dir wiki-<slug>
 
 # repo
-uv run --script .agents/skills/03-llm-wiki-interactive/scripts/clone_repo.py \
+uv run --script .agents/skills/llm-wiki-keeper/scripts/clone_repo.py \
   --repo "<url>" --wiki-dir wiki-<slug>
 ```
 
@@ -179,7 +179,7 @@ writers produced — the receipt is the interface.
 ### 1.4 Ingest tail — entity and concept pages
 
 ```bash
-uv run --script .agents/skills/03-llm-wiki-interactive/scripts/count_mentions.py --wiki-dir wiki-<slug>
+uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>
 ```
 
 The `qualifying` lists are the slugs at ≥2 distinct source-like pages — now
@@ -199,7 +199,7 @@ frontmatter and reads at most 5 full pages.
 ### 1.6 Rebuild the index
 
 ```bash
-uv run --script .agents/skills/03-llm-wiki-interactive/scripts/build_index_md.py --wiki-dir wiki-<slug>
+uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>
 ```
 
 Fix anything it reports as an `ERROR:` (a page with no `type`) before moving on.
@@ -282,8 +282,8 @@ the first run. You run them; the user never does. Paths below are relative to th
 
 | Script | Call | Does |
 |---|---|---|
-| `scripts/count_mentions.py` | `uv run --script .agents/skills/03-llm-wiki-interactive/scripts/count_mentions.py --wiki-dir wiki-<slug>` | Frontmatter walk over source-like pages → `{slug: [pages]}` + the `qualifying` list at ≥2. JSON on stdout, table on stderr. |
-| `scripts/build_index_md.py` | `uv run --script .agents/skills/03-llm-wiki-interactive/scripts/build_index_md.py --wiki-dir wiki-<slug>` | Regenerates `wiki/index.md` and each `wiki/<subdir>/index.md` from frontmatter, then checks OKF conformance. Deterministic: same input, same bytes. |
+| `scripts/count_mentions.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>` | Frontmatter walk over source-like pages → `{slug: [pages]}` + the `qualifying` list at ≥2. JSON on stdout, table on stderr. |
+| `scripts/build_index_md.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>` | Regenerates `wiki/index.md` and each `wiki/<subdir>/index.md` from frontmatter, then checks OKF conformance. Deterministic: same input, same bytes. |
 | `scripts/clone_repo.py` | `--repo <url> --wiki-dir wiki-<slug>` | Shallow-clones into `raw/repos/.github-<owner>-<repo>/`, or refreshes it. JSON receipt with `commit_sha` and `action`. |
 | `scripts/fetch_article.py` | `--url <url> --wiki-dir wiki-<slug>` | `curl` → body isolation → markdown at `raw/article-<slug>.md`. Warns when the body looks like a paywall. |
 | `scripts/fetch_youtube.py` | `--url <url> --wiki-dir wiki-<slug>` | Skeleton. Raises `NotImplementedError` — the workshop exercise in `SOURCES.md`. |

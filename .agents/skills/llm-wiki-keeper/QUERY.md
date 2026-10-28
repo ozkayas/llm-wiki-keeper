@@ -72,7 +72,7 @@ say so in your reply, add it to `open-questions.md` (Q.7), and change nothing el
    it is missing, clone it yourself — never ask the user to:**
 
    ```bash
-   uv run --script .agents/skills/03-llm-wiki-interactive/scripts/clone_repo.py \
+   uv run --script .agents/skills/llm-wiki-keeper/scripts/clone_repo.py \
      --repo "<repo_url from ARCHITECTURE.md>" --wiki-dir wiki-<slug>
    ```
 
@@ -91,7 +91,7 @@ say so in your reply, add it to `open-questions.md` (Q.7), and change nothing el
    (`CONVENTIONS.md` §8), exactly as an ingested source would:
 
    ```bash
-   uv run --script .agents/skills/03-llm-wiki-interactive/scripts/count_mentions.py --wiki-dir wiki-<slug>
+   uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>
    ```
 
    → spawn one `page_writer` per qualifying slug the new note touched →

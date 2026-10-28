@@ -1,4 +1,4 @@
-# llm-wiki-skill
+# llm-wiki-keeper
 
 An agent skill that builds and queries an LLM-maintained wiki (ingest, query).
 
@@ -25,6 +25,6 @@ Planned:
 ## Layout
 
 ```
-.agents/skills/03-llm-wiki-interactive/   # the skill (SKILL.md is the entry point)
+.agents/skills/llm-wiki-keeper/           # the skill (SKILL.md is the entry point)
 .claude/skills -> ../.agents/skills       # symlink so Claude Code finds it
 ```
