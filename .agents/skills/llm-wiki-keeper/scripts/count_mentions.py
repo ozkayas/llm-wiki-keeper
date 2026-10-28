@@ -10,7 +10,8 @@ distinct source-like pages list it** in their `entities:` / `concepts:`
 frontmatter. Source-like pages are the pages written directly from an ingested
 artifact — `wiki/sources/*.md` and, since layer 02, `wiki/repos/<repo>/*.md`.
 
-The wikilinks are read from frontmatter, not from the body, so the count is a
+The references (bundle-relative paths like `/entities/claude-code.md`; legacy
+`[[wiki/entities/x]]` still accepted) are read from frontmatter, not from the body, so the count is a
 cheap, deterministic frontmatter walk instead of a full-text scan.
 
 Usage:
@@ -57,7 +58,12 @@ def parse_frontmatter(path: Path) -> dict[str, Any]:
 
 
 def slug_of(reference: Any) -> str:
-    """Last path segment of a wikilink or path: "[[wiki/concepts/mcp]]" -> "mcp"."""
+    """Slug = filename stem of the referenced page.
+
+    v0.2 form: a bundle-relative path, "/concepts/mcp.md" -> "mcp".
+    Legacy v0.1 form (still accepted so old wikis keep counting): "[[wiki/concepts/mcp]]"
+    or "[[wiki/concepts/mcp|label]]" -> "mcp".
+    """
     text = str(reference).strip().strip("[]").split("|")[0].strip()
     if text.endswith(".md"):
         text = text[:-3]

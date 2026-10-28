@@ -2,24 +2,28 @@
 
 Everything in this file is shared by all three workshop layers. Layers 02 and 03
 **append** to it (look for `<!-- added in 02 -->` / `<!-- added in 03 -->`); they
-never rewrite what is here.
+never rewrite what is here. Sections marked `<!-- changed in keeper: OKF 0.2 -->`
+were rewritten when the skill moved from OKF v0.1 to v0.2; the decisions behind
+them are in `MIGRATION-OKF-0.2.md` at the repo root, which wins over any older text.
 
 Page templates live in `PAGES.md`. The orchestration steps live in `SKILL.md`.
 
 ---
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 1. Directory layout
 
 One wiki per project, in the project root, named `wiki-<slug>/`:
 
 ```
 wiki-<slug>/
-├── log.md                       # append-only history; oldest first
+├── config.yml                   # user preferences (§10a); NOT part of the bundle
 ├── raw/                         # immutable copies of what was ingested
 │   ├── <slug>.md                # one file per ingested note
 │   └── assets/                  # the images and transcripts those notes embed
 └── wiki/                        # the knowledge bundle — every .md carries a `type`
-    ├── index.md                 # GENERATED bundle root (carries okf_version)
+    ├── index.md                 # GENERATED bundle root (only file with frontmatter: okf_version)
+    ├── log.md                   # reserved name; newest first (§9)
     ├── overview.md              # type: overview
     ├── sources/
     │   ├── index.md             # GENERATED
@@ -33,46 +37,53 @@ Two halves, and the split is the whole point:
 - `raw/` is **what was said** — never edited, never summarized in place.
 - `wiki/` is **what we know** — written by the LLM, rewritten as sources accumulate.
 
+`index.md` and `log.md` are reserved filenames inside the bundle. `config.yml` is
+not markdown and sits next to `raw/`, outside the bundle.
+
 ## 2. Three-layer progressive disclosure
 
 Any agent reading the wiki walks down this ladder and **stops as soon as the
 question is answered**:
 
 1. `wiki/index.md` → the relevant `wiki/<subdir>/index.md` — one
-   `title — description` bullet per page. This is the cheap map.
+   `[Title](path) - description` bullet per page. This is the cheap map.
 2. The wiki page itself (source / entity / concept). ~1 page of curated prose.
 3. `raw/` — only when a wiki page is genuinely insufficient. **Never bulk-read raw.**
 
 Layer 2 exists so that layer 3 almost never has to be read. A wiki that forces
 every reader back into `raw/` has failed at its job.
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 3. Source-like pages and the ≥2 threshold
 
 A **source-like page** is a page written directly from one ingested artifact.
 In layer 01 that is exactly `wiki/sources/*.md`.
 
-Every source-like page declares, in its frontmatter, the slugs it substantively
-engages with:
+Every source-like page declares, in its frontmatter, the pages it substantively
+engages with, as **bundle-relative paths** (start with `/`, end in `.md`):
 
 ```yaml
 entities:
-  - "[[wiki/entities/claude-code]]"
+  - /entities/claude-code.md
 concepts:
-  - "[[wiki/concepts/mcp]]"
+  - /concepts/mcp.md
 ```
 
 > **An entity or concept page exists if and only if ≥2 distinct source-like
 > pages list it.**
 
 `scripts/count_mentions.py` is the single source of truth for that count — never
-eyeball it. One note mentioning something is a fact about that note; two notes
+eyeball it. It derives the slug from the path (`/concepts/mcp.md` gives `mcp`).
+These lists are data for the script, not links a reader follows; the path is the
+identity. One note mentioning something is a fact about that note; two notes
 mentioning it is a fact about your knowledge, and that is what earns a page.
 
-**Promissory links.** A source-like page may link `[[wiki/concepts/<slug>]]`
-before the page exists. Obsidian renders it as a hollow node and it resolves the
-day the second mention lands. The price is **slug discipline**: lowercase
-kebab-case, ASCII, punctuation stripped, ≤60 chars — the slug the eventual page
-will use. `agent-loop`, not `Agent Loops` or `agentic_loop`.
+**Promissory links.** A source-like page may link `[MCP](../concepts/<slug>.md)`
+in its body before the page exists (OKF tolerates broken links). Obsidian renders
+the unresolved target and it resolves the day the second mention lands. The price
+is **slug discipline**: lowercase kebab-case, ASCII, punctuation stripped, ≤60
+chars — the slug the eventual page will use. `agent-loop`, not `Agent Loops` or
+`agentic_loop`.
 
 ## 4. Identity and dedup
 
@@ -91,7 +102,9 @@ whether it exists, done.
 is only half a note without the image, so ingest copies the files it references
 into `raw/assets/`, keeping the filename. Because `raw/assets/` is then a sibling
 of `raw/<slug>.md`, the embed keeps resolving inside the wiki exactly as it did in
-the source folder — no link rewriting, and `raw/` stays a verbatim copy.
+the source folder — no link rewriting, and `raw/` stays a verbatim copy. (Raw files
+are verbatim, so Obsidian embeds inside them are fine; the no-wikilink rule in §6
+applies to what the skill writes under `wiki/`.)
 
 Attachments are **not sources**: no wiki page, no `entities:`/`concepts:`, no
 count toward the ≥2 threshold. They are payload the source page may point at.
@@ -111,41 +124,98 @@ first path it came from.
 - Same slug, different content → **still skipped**, with a warning naming both
   paths. Renaming the incoming file is the fix; silently overwriting `raw/` is not.
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 5. Frontmatter rules
 
-- Every page in `wiki/` carries: `type`, `title`, `description`, `created`,
-  `timestamp`.
-- `description` is **one sentence**. It is the only thing the index shows, so it
-  is the single highest-leverage line on the page.
-- `created` is preserved across rewrites; `timestamp` is bumped on every
-  meaningful change. Both are ISO-8601 UTC (`date -u +%Y-%m-%dT%H:%M:%SZ`).
-- **Wikilinks inside YAML are always quoted**: `- "[[wiki/sources/foo]]"`.
-  A bare `[[...]]` is a YAML flow sequence and will parse into nonsense.
+Every page in `wiki/` except `index.md` and `log.md`:
+
+```yaml
+---
+type: source                       # REQUIRED. source|entity|concept|overview|repo|repo_note|question|note|open_question
+title: ...                         # required by this skill
+description: One sentence.         # required by this skill; the only thing the index shows
+created: 2026-10-28T09:00:00Z      # extra key (OKF allows them); set once, preserved across rewrites
+generated: { by: llm-wiki-keeper/source_writer, at: 2026-10-28T09:00:00Z }
+sources: [...]                     # §6
+entities: [/entities/claude-code.md]   # source-like pages only (§3)
+concepts: [/concepts/mcp.md]           # source-like pages only (§3)
+status: stable                     # optional: draft | stable | deprecated. Absent means stable.
+stale_after: 2027-01-01T00:00:00Z  # optional, absolute instant
+tags: [a, b]                       # optional
+---
+```
+
+- `type` is required and non-empty. `title` and `description` are required by this
+  skill. `description` is **one sentence**; it is the only thing the index shows,
+  so it is the single highest-leverage line on the page.
+- **`timestamp` does not exist any more.** `generated.at` replaces it and is bumped
+  on every meaningful change; `created` never changes. `generated.by` is
+  `llm-wiki-keeper/<agent>` with `<agent>` one of `source_writer`, `repo_writer`,
+  `page_writer`, `overview_writer`, or `orchestrator` (pages the query path writes).
+- **`verified` is never written by an LLM writer.** It records a human (`human:<id>`)
+  or a named process confirming the content. A writer that adds it is lying about
+  trust. If a page already has it, preserve it.
+- `status` and `stale_after` are optional. Writers omit `stale_after` unless the
+  source is time-sensitive (prices, versions, release state).
+- `tags` are optional. Writers **never invent tags**; with `tags: optional` in
+  `config.yml` a tag already on a page is preserved, with `tags: forbidden` lint
+  flags any tag.
+- All instants are ISO 8601 with an explicit offset; this skill writes `Z` (UTC):
+  `date -u +%Y-%m-%dT%H:%M:%SZ`.
 - **Quote any value containing `: `** — a colon followed by a space makes YAML read
   the rest as a mapping, and the page silently stops parsing. This bites
   `description` first, because one-sentence gists like
   `description: "The rule: quote it"` are natural to write. `build_index_md.py`
   catches it as an `unparseable YAML frontmatter` error.
-- **No `tags:` field, anywhere.** A cross-cutting topic worth grouping by is
-  worth a concept page; free-form tag strings rot and point at nothing.
+- **Unknown keys are preserved** when a page is rewritten (`aliases`, `related`,
+  human additions).
+- Frontmatter paths (`entities:`, `concepts:`, and the per-type path keys in
+  `PAGES.md`) are bundle-relative, start with `/`, end in `.md`, and need no quoting.
 
 Full per-type contracts: `PAGES.md`.
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 6. Linking and citations
 
-- Wiki → wiki and wiki → raw use `[[wikilinks]]`, written **relative to
-  `wiki-<slug>/` with no extension**: `[[wiki/concepts/mcp]]`, `[[raw/foo]]`.
-  Obsidian resolves these by path suffix, so they work whether the vault is the
-  project root or the wiki dir itself.
-- External links use normal markdown: `[title](https://...)`.
-- **Every claim on a source page cites the raw file**:
-  `[[raw/<slug>#<heading>|cite]]`.
-- **Every claim on an entity/concept page cites a source-like page**:
-  `[[wiki/sources/<slug>]]`.
+**Links** are standard markdown, never `[[wikilinks]]`:
+
+- Wiki → wiki and wiki → raw use a **relative path with the `.md` extension**,
+  resolved from the page that contains the link: `[MCP](../concepts/mcp.md)`,
+  `[note](../../raw/foo.md#heading)`. Relative, not OKF's bundle-absolute form,
+  because Obsidian resolves `/` against the vault root and the vault is often the
+  project root, not `wiki/`. A relative link works from either.
+- Link text is a human title, never the path.
+- External links: `[title](https://...)`.
+- Frontmatter path lists (§5) are the one place bundle-relative `/x.md` is used.
+
+**Provenance** is the frontmatter `sources` list plus footnotes in the body.
+
+`sources` entries have `resource` (required) and optionally `id`, `title`, `author`,
+`last_modified`. (`usage_count` / `usage_window` are not used.) The `id` is the join
+key: a footnote label must equal a `sources[].id`.
+
+- **Source page** (one raw file): one entry `id: raw`, `resource: ../../raw/<slug>.md`.
+  An article adds a second entry `id: web` with the original URL (and `author`,
+  `last_modified` when known). Claims are footnotes `[^raw]`, with the heading
+  anchor in the footnote text, not the label:
+
+  ```markdown
+  The index is rebuilt after every ingest.[^raw]
+
+  [^raw]: [My note, "Rebuild"](../../raw/my-note.md#rebuild)
+  ```
+
+  Several claims from one raw file reuse `[^raw]`.
+- **Entity / concept / repo / overview / note pages**: one entry per page drawn
+  from, `id` = that page's slug, `resource` = relative path
+  (`../sources/my-note.md`). Claims are `[^my-note]` with the definition
+  `[^my-note]: [My note](../sources/my-note.md)`.
+- **Repo pages**: entry `{ id: repo, resource: https://github.com/<owner>/<repo>/tree/<sha>, title }`;
+  code claims keep their commit-pinned permalink style.
 - LLM judgment is never laundered as a sourced claim. It goes on its own line,
-  prefixed `> Synthesis:`.
-- Citation links must resolve. Only entity/concept cross-references may be
-  promissory (§3).
+  prefixed `> Synthesis:`, and carries no footnote.
+- Every footnote label resolves to a `sources` entry and every `sources` entry is
+  cited at least once. Only entity/concept cross-references may be promissory (§3).
 
 ## 7. Immutability and write regimes
 
@@ -155,7 +225,9 @@ Full per-type contracts: `PAGES.md`.
   does not own.
 - All `index.md` files are **generated**. Never hand-edit one; run
   `build_index_md.py`.
-- `log.md` is **append-only**, oldest entry first.
+<!-- changed in keeper: OKF 0.2 -->
+- `wiki/log.md` is **append-only in spirit**, newest first, written only through
+  `scripts/append_log.py` (§9). `config.yml` is user-owned.
 
 ## 8. The ingest tail
 
@@ -168,45 +240,93 @@ calls them the **ingest tail**, and every layer reuses them verbatim:
    written and unchanged — skip it.)
 3. Rewrite `overview.md`.
 4. `build_index_md.py` — regenerate the index cache.
-5. Append one entry to `log.md`.
+<!-- changed in keeper: OKF 0.2 -->
+5. Append one entry via `scripts/append_log.py`.
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 9. `log.md`
 
-Created on init with a `# Log` header. Entries are appended, oldest first:
+`wiki/log.md`, created on init with `# Log` and a first `Creation` entry. Newest
+first, grouped by ISO date:
 
 ```markdown
-## YYYY-MM-DD <op> | <subject>
+# Log
 
-- 2–8 bullets: what was added, what was skipped, which pages were written, decisions taken
+## 2026-10-28
+* **Ingest**: 3 notes from `notes/`; skipped 1 (already present). Sources: [a](sources/a.md), [b](sources/b.md).
+* **Query**: "what is X?" answered from [x](concepts/x.md).
+
+## 2026-10-27
+* **Creation**: Initialized the wiki.
 ```
 
-`<op>` is `ingest` or `query`. The date-led heading keeps the log greppable:
-`grep -E '^## [0-9]{4}-' log.md`.
+- The bold word is one of `Creation`, `Ingest`, `Query`, `Lint`, `Update`. OKF treats
+  it as a convention; this skill **always** writes one.
+- Entry links are relative to `wiki/log.md` (`sources/a.md`, no leading `..`).
+- New entries go **at the top of the current day's group**; a new day opens a new
+  `## YYYY-MM-DD` heading directly under `# Log`. Never edit or delete an old entry.
+- Agents never edit `log.md` by hand; `scripts/append_log.py` does the insertion.
+- Greppable: `grep -E '^## [0-9]{4}-' wiki/log.md`.
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 10. OKF alignment (why the layout looks like this)
 
-`wiki/` is an [Open Knowledge Format](https://openknowledgeformat.org) v0.1
+`wiki/` is an [Open Knowledge Format](https://openknowledgeformat.org) **v0.2**
 bundle. The parts we honour:
 
 - markdown documents with YAML frontmatter; **path is identity**;
 - every non-reserved file carries a non-empty `type`;
-- `index.md` and `log.md` are **reserved** — navigation and history, not content;
-- the bundle root `wiki/index.md` declares `okf_version: "0.1"`;
+- `index.md` and `log.md` are **reserved**: navigation and history, not content;
+- only the bundle root `wiki/index.md` has frontmatter, and it declares
+  `okf_version: "0.2"`; subdirectory indexes have none, entries read
+  `* [Title](relative-path) - description`, and a subdirectory entry reads
+  `* [Name](dir/) - N pages`;
+- provenance via `sources`, `generated`, optional `status` / `stale_after` /
+  `verified`; `timestamp` is gone;
+- log newest first, date-grouped, bold operation word;
 - frontmatter is canonical, the index is a **rebuildable cache** (delete every
   `index.md`, re-run the script, get the same bytes back).
 
-Two deliberate divergences: we use Obsidian `[[wikilinks]]` instead of relative
-markdown links (the graph view is a teaching tool), and our log is oldest-first
-and append-only.
+Divergences that remain, deliberately:
+
+1. `created` is an extra, producer-defined key (OKF allows extra keys).
+2. Links are **relative** (`../concepts/x.md`), not OKF's recommended bundle-absolute
+   `/concepts/x.md`, so they resolve in Obsidian whatever the vault root is.
+   Frontmatter `entities:` / `concepts:` do use bundle-absolute paths.
+3. The bold operation word in the log is always written (OKF: convention).
+4. `raw/` lives outside the bundle and is linked into it by `../../raw/...`.
+5. `config.yml` lives outside the bundle; it is not an OKF concept.
+6. Promissory links to pages that do not exist yet are used on purpose (OKF tolerates them).
 
 `build_index_md.py` checks conformance on every run: a page with no `type` is an
 error (non-zero exit), a missing `description` or a malformed log heading is a
 warning on stderr.
 
+<!-- changed in keeper: OKF 0.2 -->
+## 10a. `config.yml`
+
+`wiki-<slug>/config.yml` holds the user's preferences. It is created on the first
+run (ingest mode, when the wiki is created, after the slug is confirmed): the
+orchestrator asks the user **once** with the ask-user capability, writes the
+answers, and never asks again. Every later run reads it first (SKILL.md Step 0).
+
+```yaml
+# wiki-<slug>/config.yml   (owned by the user; the skill changes it only when the user asks)
+language: en            # language wiki pages are written in
+tags: optional          # optional | forbidden. optional = allowed if present, writers never invent them. forbidden = lint flags any tag.
+stale_after_days: 60    # how old a time-sensitive page may get before lint calls it stale
+```
+
+- If the user answers nothing, the defaults above apply and the file is still
+  written, so the question is not asked again.
+- A missing `config.yml` on an existing wiki means the defaults and is not an error.
+- Log order, link style and OKF version are **not** configurable; this document fixes them.
+
 ---
 
 <!-- added in 02 -->
 
+<!-- changed in keeper: OKF 0.2 -->
 ## 11. Repos as sources (added in 02)
 
 A repository is a source like any other; only its raw artifact is a directory
@@ -243,10 +363,10 @@ threshold identically. This is the point: a concept mentioned in one note and
 implemented in one codebase has two independent witnesses, and materializes.
 
 **Repos refresh instead of skipping.** Re-ingesting a repo runs `git fetch` plus
-`reset --hard`, rewrites `ARCHITECTURE.md`, bumps `commit_sha`, and re-runs the
-ingest tail. Every other origin is immutable once ingested (§7); a repo is a
-moving target, and pretending otherwise would leave permalinks pointing at code
-that no longer exists.
+`reset --hard`, rewrites `ARCHITECTURE.md`, bumps `commit_sha` and `generated.at`,
+and re-runs the ingest tail. Every other origin is immutable once ingested (§7); a
+repo is a moving target, and pretending otherwise would leave permalinks pointing
+at code that no longer exists.
 
 ## 12. Context discipline (added in 02)
 
@@ -255,7 +375,7 @@ note. This layer removes the cap by making sure nothing ever reads everything.
 
 | Who | May read | Never reads |
 |---|---|---|
-| orchestrator | receipts, script output, `log.md` | `raw/`, wiki pages |
+| orchestrator | receipts, script output, `wiki/log.md` | `raw/`, wiki pages |
 | `source_writer` | **one** raw file | any other raw file, any wiki page |
 | `repo_writer` | one clone | other clones, source pages |
 | `page_writer` | the source-like pages for its slug | `raw/`, other aggregate pages |
@@ -322,3 +442,8 @@ Three rules keep this layer from turning into a chat log:
    why-this-matters, so `questions/index.md` stays cheap to scan.
 3. **One note per topic.** A repeat question enriches the existing note and adds a
    second question page pointing at it — never a second note.
+
+<!-- changed in keeper: OKF 0.2 -->
+Query-path pages (`questions/`, `notes/`, `open-questions.md`) carry
+`generated.by: llm-wiki-keeper/orchestrator`; a repo note carries
+`llm-wiki-keeper/repo_writer`. Each query appends one `**Query**` entry to the log.
