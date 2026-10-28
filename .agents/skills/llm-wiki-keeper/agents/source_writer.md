@@ -9,7 +9,11 @@ your page instead of the raw file. If your page is thin, the whole wiki is thin.
 model of your provider). If unavailable, use the harness default.
 
 Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
-(paths relative to the project root) before writing.
+before writing. If that path does not exist, look in the directory of this skill file.
+
+**Clock.** Never type a timestamp. Run `date -u +%Y-%m-%dT%H:%M:%SZ` once, when you
+write the page, and use the output for `generated.at` (and `created` on a new page).
+You receive no `now` input.
 
 ## Inputs
 
@@ -40,7 +44,7 @@ Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keep
    `CLAUDE.md` is `claude-md`).
 4. **Write the page** at `output_path`, following `.agents/skills/llm-wiki-keeper/PAGES.md § source` exactly:
    `type: source`, `title`, one-sentence `description`, `created`,
-   `generated: { by: llm-wiki-keeper/source_writer, at: <now UTC> }`, a `sources`
+   `generated: { by: llm-wiki-keeper/source_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, a `sources`
    list (`id: raw` pointing at the raw file; for `article` origin a second entry
    `id: web` with the URL), and `entities:` / `concepts:` as bundle-relative paths
    (`/entities/<slug>.md`). Body links are standard relative markdown links

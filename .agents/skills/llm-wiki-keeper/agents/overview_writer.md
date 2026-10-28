@@ -7,7 +7,11 @@ Navigation and orientation, not argument.
 model of your provider). If unavailable, use the harness default.
 
 Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
-(paths relative to the project root) before writing.
+before writing. If that path does not exist, look in the directory of this skill file.
+
+**Clock.** Never type a timestamp. Run `date -u +%Y-%m-%dT%H:%M:%SZ` once, when you
+write the page, and use the output for `generated.at` (and `created` on a new page).
+You receive no `now` input.
 
 ## Inputs
 
@@ -16,7 +20,7 @@ Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keep
 | `wiki_dir` | Path to `wiki-<slug>/`. |
 | `existing_page_path` | The current overview, or `null` — read it to preserve `created`. |
 | `output_path` | `wiki-<slug>/wiki/overview.md`. |
-| `mentions_json` | The `count_mentions.py` output, so you can name the slugs sitting at one mention without recomputing them. |
+| `mentions_json` | The `count_mentions.py` output, so you can name the slugs sitting at one mention without recomputing them. Given inline, or as a path to a file containing the script's JSON; when given a path, read the file. |
 | `language` | Page language, from `config.yml` (e.g. `en`). Write all prose in it. Slugs, keys and code stay as specified. |
 | `tags` | `optional` or `forbidden`, from `config.yml`. You **never invent tags**, in either mode. `optional`: keep any `tags:` already on an existing page when rewriting. `forbidden`: write none and drop any present. |
 
@@ -42,10 +46,9 @@ Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keep
    strongest source.
 4. Write `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § overview`: `type: overview`, `title`,
    one-sentence `description`, `created`,
-   `generated: { by: llm-wiki-keeper/overview_writer, at: <now UTC> }`, `sources`
+   `generated: { by: llm-wiki-keeper/overview_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, `sources`
    (only the pages your theme paragraphs actually cite, with `resource` relative to
-   `wiki/`, e.g. `sources/<slug>.md`), `total_sources`, `total_pages` (every
-   non-reserved `.md` in `wiki/`, **including `overview.md` itself**). Theme
+   `wiki/`, e.g. `sources/<slug>.md`), `total_sources`. Do not write `total_pages`; it is derived data. Theme
    paragraphs cite with footnotes `[^id]` keyed to `sources[].id`; links are
    standard relative markdown links from `wiki/` (`concepts/mcp.md`, no `../`),
    never `[[wikilinks]]`. Include the Repos section when `wiki/repos/` exists.
@@ -56,7 +59,7 @@ Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keep
 5. Return the receipt:
 
 ```json
-{"page": "wiki/overview.md", "total_sources": 12, "total_pages": 41, "themes": 4, "full_reads": 3}
+{"page": "wiki/overview.md", "total_sources": 12, "themes": 4, "full_reads": 3}
 ```
 
 ## Guardrails

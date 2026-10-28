@@ -13,6 +13,7 @@ relative markdown links, one-sentence `description`, ISO-8601 instants) live in
 
 - `generated: { by: llm-wiki-keeper/<agent>, at: <ISO-8601 UTC> }` replaces the old
   `timestamp`; bump `at` on every meaningful change. `created` is preserved.
+- Timestamps come from `date -u +%Y-%m-%dT%H:%M:%SZ` run at write time, never typed by hand (`CONVENTIONS.md` §5).
 - Never write `verified`, and never invent `tags`. Preserve unknown keys on rewrite.
 - Frontmatter path values are bundle-relative (`/concepts/mcp.md`); body links are
   relative to the page (`../concepts/mcp.md`).
@@ -303,7 +304,6 @@ sources:
     resource: sources/<page-slug>.md     # or concepts/..., entities/...
     title: <page title>
 total_sources: <int>
-total_pages: <int>                   # every non-reserved .md in wiki/, overview.md itself included
 ---
 
 # <slug> — Overview
@@ -334,8 +334,9 @@ what they have in common, goes on a `> Synthesis:` line.>
 ```
 
 The overview must **link** every waiting slug it lists (a promissory link is fine),
-so each shows as a hollow node in the graph. `total_pages` counts every
-non-reserved `.md` in `wiki/`, including `overview.md` itself.
+so each shows as a hollow node in the graph. The overview carries no page total
+(it would go stale, and the overview is counted while it is being written); the
+`## Health` section keeps the per-type counts.
 
 `sources` lists the pages the theme paragraphs actually cite through footnotes
 (not every page that appears in the Index or Health lists); each id has a
@@ -368,7 +369,6 @@ sources:
     resource: sources/tool-servers.md
     title: Writing tool servers
 total_sources: 2
-total_pages: 6
 ---
 
 # ai-notes — Overview
@@ -565,6 +565,7 @@ Full answer: [<note title>](../notes/<slug>.md)
 - <3–6 bullets, ≤12 words each, one per section of the note>
 
 <!-- when answer_doc is null, replace the above with a ≤5-line inline summary -->
+<!-- when the wiki does not cover the question: sources_cited lists the pages read to establish that, answer_doc stays null, and the open question is recorded -->
 
 ## Why this matters
 

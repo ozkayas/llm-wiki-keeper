@@ -164,6 +164,11 @@ tags: [a, b]                       # optional
   flags any tag.
 - All instants are ISO 8601 with an explicit offset; this skill writes `Z` (UTC):
   `date -u +%Y-%m-%dT%H:%M:%SZ`.
+- **No agent types a timestamp by hand.** Every page-writing agent, the orchestrator
+  included (question, note and open-questions pages), runs
+  `date -u +%Y-%m-%dT%H:%M:%SZ` at write time, one call per page, and uses the
+  output for `generated.at` (and `created` on a new page). Writers spawned by the
+  orchestrator receive no `now` input; they run `date` themselves.
 - **Quote any value containing `: `** — a colon followed by a space makes YAML read
   the rest as a mapping, and the page silently stops parsing. This bites
   `description` first, because one-sentence gists like
@@ -389,7 +394,8 @@ note. This layer removes the cap by making sure nothing ever reads everything.
 
 | Who | May read | Never reads |
 |---|---|---|
-| orchestrator | receipts, script output, `wiki/log.md` | `raw/`, wiki pages |
+| orchestrator, ingest mode | receipts, script output, `wiki/log.md` | `raw/`, wiki pages |
+| orchestrator, query mode | `wiki/index.md`, subdirectory indexes, and the wiki pages the disclosure ladder (`QUERY.md` Q.3) tells it to read | `raw/`, except where `QUERY.md` says so |
 | `source_writer` | **one** raw file | any other raw file, any wiki page |
 | `repo_writer` | one clone | other clones, source pages |
 | `page_writer` | the source-like pages for its slug | `raw/`, other aggregate pages |

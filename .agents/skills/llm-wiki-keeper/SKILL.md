@@ -20,8 +20,9 @@ preferences in `wiki-<slug>/config.yml`. A lint mode is planned; it does not exi
 yet, so do not offer it.
 
 Four files carry the contract, and you follow them exactly (they live in
-`.agents/skills/llm-wiki-keeper/`, relative to the project root; every agent prompt
-you write must name them by that full path):
+`.agents/skills/llm-wiki-keeper/`; every agent prompt you write must name them by
+the exact path, for example `.agents/skills/llm-wiki-keeper/PAGES.md`. If that path
+does not exist, look in the directory of this skill file):
 
 - `CONVENTIONS.md` — layout, identity, threshold, links, log, config, OKF, write regimes.
 - `PAGES.md` — the template and receipt for every page type.
@@ -47,15 +48,13 @@ Glob `wiki-*/` in the project root and keep the ones that contain both `raw/` an
 | 0, ingest mode | Propose a slug from the topic of the incoming notes (kebab-case, e.g. `ai-engineering`), confirm it with the user, then create the wiki. |
 | 0, query mode | Say there is no wiki yet and stop. Do not create one to answer a question. |
 
-Creating a wiki (ingest mode, slug confirmed). First ask the user **once**, with
-your ask-user capability, the three config questions: the language wiki pages are
+Creating a wiki (ingest mode, slug confirmed):
+
+- No ask-user capability (for example you are a subagent): write config.yml with the defaults and say so in your report.
+- Otherwise ask the user **once**, with your ask-user capability, the three config questions: the language wiki pages are
 written in; whether tags are `optional` or `forbidden`; and `stale_after_days`
 (default 60). Then write `wiki-<slug>/config.yml` per `CONVENTIONS.md` §10a with
 the answers (defaults for anything left unanswered) and never ask again.
-
-If your harness has **no ask-user capability** (for example you are yourself a
-subagent), do not ask: use the defaults, write `config.yml`, and say in your report
-that the defaults were used because the user could not be asked.
 
 ```bash
 mkdir -p wiki-<slug>/raw wiki-<slug>/wiki/sources wiki-<slug>/wiki/entities wiki-<slug>/wiki/concepts
@@ -197,6 +196,8 @@ Inputs table lists:
 ls wiki-<slug>/wiki/entities wiki-<slug>/wiki/concepts
 ```
 
+On a first run both directories are empty. Pass an empty list; do not skip the input.
+
 - **File artifacts** → one `agents/source_writer.md` per raw file, in parallel.
 - **Repos** → one `agents/repo_writer.md` (`mode: architecture`) per repo, output
   `wiki/repos/github-<owner>-<repo>/ARCHITECTURE.md`.
@@ -222,7 +223,7 @@ changed — leave it alone.
 
 ### 1.5 Rewrite the overview
 
-Spawn `agents/overview_writer.md` with the `count_mentions.py` output, plus `language` and `tags`. It walks
+Spawn `agents/overview_writer.md` with the `count_mentions.py` output (inline, or saved to a scratch file whose path you pass as `mentions_json`), plus `language` and `tags`. It walks
 frontmatter and reads at most 5 full pages.
 
 ### 1.6 Rebuild the index
@@ -292,7 +293,7 @@ This skill is written for any agent harness. It needs five capabilities:
 | read a file | raw notes, wiki pages |
 | write a file | every page you create |
 | run a shell command | `cp`, `ls`, `mkdir`, the scripts |
-| ask the user | the wiki slug, which wiki to use, the three `config.yml` questions at creation |
+| ask the user | the wiki slug, which wiki to use, the three `config.yml` questions at creation. Without it: write `config.yml` with the defaults and say so in your report. |
 | spawn a subagent | every page written in this layer |
 
 In Claude Code those are `Read`, `Write`, `Bash`, `AskUserQuestion` and the

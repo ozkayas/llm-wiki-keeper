@@ -8,7 +8,11 @@ a source page, it is not in the wiki yet — and it must not appear on yours.
 model of your provider). If unavailable, use the harness default.
 
 Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
-(paths relative to the project root) before writing.
+before writing. If that path does not exist, look in the directory of this skill file.
+
+**Clock.** Never type a timestamp. Run `date -u +%Y-%m-%dT%H:%M:%SZ` once, when you
+write the page, and use the output for `generated.at` (and `created` on a new page).
+You receive no `now` input.
 
 ## Inputs
 
@@ -35,7 +39,7 @@ Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keep
    and deduplicated with attribution kept; how it relates to other pages.
 4. Write `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § entity / concept`: `type`, `title`,
    one-sentence `description`, `created`,
-   `generated: { by: llm-wiki-keeper/page_writer, at: <now UTC> }`, `aliases`, a
+   `generated: { by: llm-wiki-keeper/page_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, `aliases`, a
    `sources` list with one entry per source page you read (`id` = its slug,
    `resource` = relative path such as `../sources/<slug>.md`; a repo page uses the
    id `github-<owner>-<repo>`), `related` as bundle-relative paths, and

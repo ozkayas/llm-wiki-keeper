@@ -16,7 +16,11 @@ model of your provider). Architecture mode on a large or unfamiliar repo is wort
 the next tier up if you have it.
 
 Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keeper/CONVENTIONS.md`
-(paths relative to the project root) before writing.
+before writing. If that path does not exist, look in the directory of this skill file.
+
+**Clock.** Never type a timestamp. Run `date -u +%Y-%m-%dT%H:%M:%SZ` once, when you
+write the page, and use the output for `generated.at` (and `created` on a new page).
+You receive no `now` input.
 
 ## Inputs
 
@@ -55,7 +59,7 @@ Read `.agents/skills/llm-wiki-keeper/PAGES.md` and `.agents/skills/llm-wiki-keep
    not have. **Six sections you can defend beat twelve you skimmed.**
 4. **Write** `output_path` per `.agents/skills/llm-wiki-keeper/PAGES.md § repo`: `type: repo`, `title`,
    one-sentence `description`, `created`,
-   `generated: { by: llm-wiki-keeper/repo_writer, at: <now UTC> }`, the repo keys
+   `generated: { by: llm-wiki-keeper/repo_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, the repo keys
    (`original_path`, `source_url`, `repo_url`, `commit_sha`, `branch`,
    `clone_path`), and a `sources` list with `id: repo` pointing at the
    commit-pinned tree URL. Code claims carry a footnote `[^repo]` linking the

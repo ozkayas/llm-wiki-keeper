@@ -50,8 +50,9 @@ Answer from the wiki pages you read. Then decide what to keep:
 1. **Always write the slim question page** — `wiki/questions/YYYY-MM-DD-<slug>.md`,
    per `PAGES.md § question`. Interaction-owned pages use v0.2 frontmatter
    (`type`, `title`, `description`, `created`, `generated`) with
-   `generated.by: llm-wiki-keeper/orchestrator`; write instants with
-   `date -u +%Y-%m-%dT%H:%M:%SZ`. It is a pointer, not an answer: the verbatim
+   `generated.by: llm-wiki-keeper/orchestrator`. Never type a timestamp: run
+   `date -u +%Y-%m-%dT%H:%M:%SZ` at write time, one call per page you write
+   (question, note, open-questions), and use the output. It is a pointer, not an answer: the verbatim
    question, what it was answered from, and a relative markdown link to the
    knowledge if there is any. Cap it at ~25 lines.
 2. **Write or enrich a note only when the answer earned it** — the answer cited
@@ -66,6 +67,8 @@ Answer from the wiki pages you read. Then decide what to keep:
    structure, add `sources` entries (and footnotes) for newly cited pages, bump
    `generated.at`, keep `created`. A repeat question produces a second
    question page and **one** note, never a second note.
+
+If the answer is "the wiki does not cover this", `sources_cited` lists the wiki pages you read to establish that, `answer_doc` stays null, and the open question is recorded (Q.7).
 
 If the answer implies an ingest-owned page is wrong, stale or missing something:
 say so in your reply, add it to `open-questions.md` (Q.7), and change nothing else.
