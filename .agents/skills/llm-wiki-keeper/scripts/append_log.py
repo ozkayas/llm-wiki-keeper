@@ -8,6 +8,8 @@ Entry format: `* **<Op>**: <text>`. It goes at the top of its date's `## YYYY-MM
 group; a missing group is created at its chronological place (newest first), directly
 under `# Log` when it is the newest. wiki/log.md is created when missing.
 
+Repeat --text for several bullets: they are written as one block, in the given order.
+
 Usage:
   uv run --script append_log.py --wiki-dir wiki-<slug> --op Ingest --text "3 notes from `notes/`."
   uv run --script append_log.py --wiki-dir wiki-<slug> --op Update --text "..." --date 2026-10-01
@@ -67,7 +69,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--wiki-dir", required=True, help="Path to wiki-<slug>/ (the dir holding raw/ and wiki/).")
     parser.add_argument("--op", required=True, help="One of: " + ", ".join(OPS))
-    parser.add_argument("--text", required=True, help="Entry text (markdown allowed, one entry per call).")
+    parser.add_argument("--text", required=True, action="append", help="Bullet text (markdown allowed). Repeat for several bullets: written as one block, in the given order.")
     parser.add_argument("--date", help="YYYY-MM-DD (default: today, local). For backfill/testing.")
     args = parser.parse_args()
 
@@ -77,8 +79,8 @@ def main() -> None:
         day = Date.fromisoformat(args.date).isoformat() if args.date else Date.today().isoformat()
     except ValueError:
         raise SystemExit(f"--date must be YYYY-MM-DD, got {args.date!r}")
-    text = " ".join(args.text.split())
-    if not text:
+    texts = [" ".join(t.split()) for t in args.text]
+    if not all(texts):
         raise SystemExit("--text is empty")
 
     bundle = Path(args.wiki_dir).expanduser().resolve() / "wiki"
@@ -87,9 +89,9 @@ def main() -> None:
     log = bundle / "log.md"
     created = not log.is_file()
     existing = "# Log\n" if created else log.read_text()
-    entry = f"* **{args.op}**: {text}"
+    entry = "\n".join(f"* **{args.op}**: {t}" for t in texts)
     log.write_text(insert_entry(existing, day, entry))
-    print(json.dumps({"log": str(log), "date": day, "op": args.op, "entry": entry, "created": created}))
+    print(json.dumps({"log": str(log), "date": day, "op": args.op, "entry": entry, "created": created, "bullets": len(texts)}))
 
 
 if __name__ == "__main__":

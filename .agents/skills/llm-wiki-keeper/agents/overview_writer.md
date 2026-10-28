@@ -14,6 +14,8 @@ model of your provider). If unavailable, use the harness default.
 | `existing_page_path` | The current overview, or `null` — read it to preserve `created`. |
 | `output_path` | `wiki-<slug>/wiki/overview.md`. |
 | `mentions_json` | The `count_mentions.py` output, so you can name the slugs sitting at one mention without recomputing them. |
+| `language` | Page language, from `config.yml` (e.g. `en`). Write all prose in it. Slugs, keys and code stay as specified. |
+| `tags` | `optional` or `forbidden`, from `config.yml`. You **never invent tags**, in either mode. `optional`: keep any `tags:` already on an existing page when rewriting. `forbidden`: write none and drop any present. |
 
 ## Process
 
@@ -27,16 +29,23 @@ model of your provider). If unavailable, use the harness default.
    done
    ```
 
-   `title`, `description`, `sources:` and `source_count` are enough to see the
-   shape of the wiki.
+   `title`, `description`, the `sources` list, `entities:` / `concepts:` and
+   `source_count` are enough to see the shape of the wiki.
 2. **Read at most 5 full pages**, and only ones you are about to characterize.
    If you want a sixth, stop: write what you can support and say the rest is
    thinner than it looks.
 3. **Find themes from co-citation** — which pages get cited by the same sources.
    Themes are observed, not invented; 2–4 of them, each naming its pages and its
    strongest source.
-4. Write `output_path` per `PAGES.md § overview`, including the Repos section when
-   `wiki/repos/` exists.
+4. Write `output_path` per `PAGES.md § overview`: `type: overview`, `title`,
+   one-sentence `description`, `created`,
+   `generated: { by: llm-wiki-keeper/overview_writer, at: <now UTC> }`, `sources`
+   (only the pages your theme paragraphs actually cite, with `resource` relative to
+   `wiki/`, e.g. `sources/<slug>.md`), `total_sources`, `total_pages`. Theme
+   paragraphs cite with footnotes `[^id]` keyed to `sources[].id`; links are
+   standard relative markdown links from `wiki/` (`concepts/mcp.md`, no `../`),
+   never `[[wikilinks]]`. Include the Repos section when `wiki/repos/` exists.
+   Never write `verified`, `timestamp` or `stale_after`.
 5. Return the receipt:
 
 ```json
@@ -45,7 +54,7 @@ model of your provider). If unavailable, use the harness default.
 
 ## Guardrails
 
-- **Preserve `created`.**
+- **Preserve `created`** and unknown frontmatter keys; bump `generated.at`.
 - **Never invent a theme to look organized.** If the sources do not cluster, say
   the wiki is still a list and show the list.
 - **The "waiting at 1 mention" line is not filler** — it is the wiki's to-do list,

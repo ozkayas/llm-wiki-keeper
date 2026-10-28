@@ -91,7 +91,9 @@ Three steps. Nothing outside this list changes.
 1. **Write `scripts/fetch_<origin>.py`** honoring the contract above: one URI in,
    one raw artifact plus one receipt out. Decide the **identity** first — the raw
    path must be derivable from the URI alone and must not change when the title
-   does. For YouTube that is the video id, not the title.
+   does. For YouTube that is the video id, not the title. The adapter must also
+   provide `last_modified` and the author when the origin has them (receipt
+   `published_date` and `authors`); they feed the page's `sources` entries.
 2. **Add one row to the routing table** in this file, and one line to Step 1.0 in
    `SKILL.md`.
 3. **Pick the writer.** A markdown file → `source_writer`, unchanged. A directory
@@ -108,12 +110,12 @@ identity, never fetching.
 
 | Origin | Fetch mechanism | Identity | The part that bites |
 |---|---|---|---|
-| **YouTube** | `youtube-transcript-api`, `yt-dlp --write-auto-sub`, or the Data API | video id | Auto-captions have no punctuation and no headings, so citations have nothing to anchor to — timestamped sections are the fix. |
+| **YouTube** | `youtube-transcript-api`, `yt-dlp --write-auto-sub`, or the Data API | video id | Auto-captions have no punctuation and no headings, so footnote citations have nothing to anchor to — timestamped sections are the fix. |
 | **X / Twitter** | official API (paid) or an export | tweet id; a thread is one source, not N | Deciding the unit: a thread reads as one document, but replies arrive later and change it. |
 | **LinkedIn** | no usable API; a data export or manual paste | post URN | Terms of service, and posts that are edited in place under a stable URL. |
 | **Reddit** | public JSON (`<url>.json`) | permalink id | The comments *are* the content — flatten the tree, or the source page cites nothing. |
 | **Readwise** | Reader API | document id | Highlights are a partial view; the raw file is honestly incomplete and the source page should say so. |
-| **Obsidian vault** | filesystem walk | vault-relative path | It already works — it is the `local` adapter — but embeds (`![[…]]`) and `[[wikilinks]]` point at files you did not ingest. |
+| **Obsidian vault** | filesystem walk | vault-relative path | It already works — it is the `local` adapter — but embeds (`![[…]]`) and any `[[wikilinks]]` inside the raw note point at files you did not ingest (raw stays verbatim; the wiki pages the skill writes use relative markdown links). |
 | **PDF** | `pymupdf` / `pdftotext` | file hash or DOI | Scanned PDFs need OCR, and page numbers are the only citation anchor you get. |
 
 The pattern across all of them: **fetching is a weekend; identity is the design

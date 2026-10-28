@@ -20,7 +20,8 @@ you record it in `open-questions.md` and the next ingest folds it in.
 ## Q.1 — Locate the wiki
 
 Same as `SKILL.md` Step 0. No wiki → say so and stop; do not create one to answer
-a question.
+a question. Read `wiki-<slug>/config.yml` (a missing one means the defaults) and
+write every page in its `language`; never add `tags` unless the user gave them.
 
 ## Q.2 — Load the map
 
@@ -47,15 +48,19 @@ entity/concept pages (already synthesized across sources) over source pages
 Answer from the wiki pages you read. Then decide what to keep:
 
 1. **Always write the slim question page** — `wiki/questions/YYYY-MM-DD-<slug>.md`,
-   per `PAGES.md § question`. It is a pointer, not an answer: the verbatim
-   question, what it was answered from, and a link to the knowledge if there is
-   any. Cap it at ~25 lines.
+   per `PAGES.md § question`. Interaction-owned pages use v0.2 frontmatter
+   (`type`, `title`, `description`, `created`, `generated`) with
+   `generated.by: llm-wiki-keeper/orchestrator`; write instants with
+   `date -u +%Y-%m-%dT%H:%M:%SZ`. It is a pointer, not an answer: the verbatim
+   question, what it was answered from, and a relative markdown link to the
+   knowledge if there is any. Cap it at ~25 lines.
 2. **Write or enrich a note only when the answer earned it** — the answer cited
    **≥2 wiki pages**, or the user said "save this". Otherwise the question page
    alone is the record. Most questions are conversational and should not compound.
 3. **Idempotency**: if a note on the same topic exists, *enrich it in place* —
    append to `spawned_by_question`, merge the new material into the existing
-   structure, bump `timestamp`, keep `created`. A repeat question produces a second
+   structure, add `sources` entries (and footnotes) for newly cited pages, bump
+   `generated.at`, keep `created`. A repeat question produces a second
    question page and **one** note, never a second note.
 
 If the answer implies an ingest-owned page is wrong, stale or missing something:
@@ -82,8 +87,8 @@ say so in your reply, add it to `open-questions.md` (Q.7), and change nothing el
    one in `ARCHITECTURE.md`, say so in the answer; you do not rewrite that page in
    query mode — suggest re-ingesting the repo.
    Then spawn `agents/repo_writer.md` with `mode: question`, passing `clone_path`,
-   `commit_sha`, `branch`, the verbatim `question`, the `architecture_path`, and
-   the `question_page` wikilink. It writes
+   `commit_sha`, `branch`, the verbatim `question`, the `architecture_path`, the
+   `question_page` path, and `language` and `tags` from `config.yml`. It writes
    `wiki/repos/<repo>/<question-slug>.md` (`PAGES.md § repo_note`) and returns a
    receipt. If its receipt says `"answered_from_architecture": true`, it wrote
    nothing — fall back to Q.5.
@@ -96,14 +101,16 @@ say so in your reply, add it to `open-questions.md` (Q.7), and change nothing el
 
    → spawn one `page_writer` per qualifying slug the new note touched →
    `overview_writer` → `build_index_md.py`.
-4. Then write the slim question page with `answer_doc` pointing at the repo note.
+4. Then write the slim question page with `answer_doc` pointing at the repo note
+   (bundle-relative path, `/repos/<repo>/<question-slug>.md`).
 
 This is the only way query mode reaches an ingest-owned page: **through the tail,
 never by hand.**
 
 ## Q.7 — Open questions
 
-Append to `wiki/open-questions.md` (creating it with frontmatter on first use) when
+Append to `wiki/open-questions.md` (creating it with `type: open_question`
+frontmatter on first use; bump `generated.at` on every append) when
 either is true:
 
 - the user flags one ("log this as open", "we should look into that"), or
@@ -117,26 +124,29 @@ decides.
 
 ## Q.8 — Log and present
 
-Append one entry to `log.md`:
+Append one entry through the script; never edit `log.md` by hand. Op `Query`,
+one `--text` per bullet (written in order, as one block at the top of the day):
 
-```markdown
-## <YYYY-MM-DD> query | <topic>
-
-- question: "<verbatim, ≤200 chars>"
-- pages used: <count> (<slugs>)
-- saved: wiki/questions/<file> + <note or repo note>, or "question page only"
-- tail: <pages updated by the ingest tail, or omit>
-- open question logged: <one line, or omit>
+```bash
+uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir wiki-<slug> --op Query \
+  --text "Question: \"<verbatim, ≤200 chars>\"." \
+  --text "Pages used: <count> ([<title>](concepts/<slug>.md), ...)." \
+  --text "Saved: [<title>](questions/<file>.md) + [<title>](notes/<file>.md), or question page only." \
+  --text "Tail: <pages updated by the ingest tail, or omit>." \
+  --text "Open question logged: <one line, or omit>."
 ```
+
+Links in log text are relative to `wiki/log.md`. If the ingest tail ran (repo
+path), its own `Ingest`/`Update` entries are logged as in `SKILL.md` 1.7.
 
 Then answer the user:
 
 ```
 ## <question as a topic line>
 
-<the answer, with [[wikilinks]] to every page it rests on>
+<the answer, with standard relative links ([title](wiki/concepts/x.md)) to every page it rests on>
 
-Pages used: [[...]], [[...]]
+Pages used: [title](...), [title](...)
 Saved: wiki/questions/<file> · wiki/notes/<file>        (or: question page only)
 ```
 

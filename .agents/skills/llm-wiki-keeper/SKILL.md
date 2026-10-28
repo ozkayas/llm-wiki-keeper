@@ -1,6 +1,6 @@
 ---
 name: llm-wiki-keeper
-description: "Build and query an LLM-maintained wiki that learns from being used — questions, notes and repo answers land back in the graph (modes: ingest, query)."
+description: "Build and query an LLM-maintained wiki (OKF v0.2 bundle) that learns from being used — questions, notes and repo answers land back in the graph (modes: ingest, query; a lint mode is planned, not built yet)."
 ---
 
 # LLM Wiki — layer 03, interactive
@@ -15,9 +15,13 @@ source-like page that flows through the same ingest tail as any source.
 The discipline that makes this safe is **regime separation** (`CONVENTIONS.md`
 §13): reading a source can never change what the wiki says that source means.
 
+The wiki is an Open Knowledge Format **v0.2** bundle (`wiki/`), with user
+preferences in `wiki-<slug>/config.yml`. A lint mode is planned; it does not exist
+yet, so do not offer it.
+
 Four files carry the contract, and you follow them exactly:
 
-- `CONVENTIONS.md` — layout, identity, threshold, links, log, OKF, write regimes.
+- `CONVENTIONS.md` — layout, identity, threshold, links, log, config, OKF, write regimes.
 - `PAGES.md` — the template and receipt for every page type.
 - `SOURCES.md` — the adapter contract, the routing table, and how to add an origin.
 - `QUERY.md` — the whole query path, Q.1–Q.8.
@@ -30,7 +34,9 @@ your first answer.
 ## Step 0 — Locate the wiki
 
 Glob `wiki-*/` in the project root and keep the ones that contain both `raw/` and
-`wiki/`.
+`wiki/`. Once you have the wiki, read `wiki-<slug>/config.yml` (`language`, `tags`,
+`stale_after_days`). A missing config on an existing wiki means the defaults
+(`language: en`, `tags: optional`, `stale_after_days: 60`), not an error.
 
 | Found | Do |
 |---|---|
@@ -39,12 +45,19 @@ Glob `wiki-*/` in the project root and keep the ones that contain both `raw/` an
 | 0, ingest mode | Propose a slug from the topic of the incoming notes (kebab-case, e.g. `ai-engineering`), confirm it with the user, then create the wiki. |
 | 0, query mode | Say there is no wiki yet and stop. Do not create one to answer a question. |
 
-Creating a wiki:
+Creating a wiki (ingest mode, slug confirmed). First ask the user **once**, with
+your ask-user capability, the three config questions: the language wiki pages are
+written in; whether tags are `optional` or `forbidden`; and `stale_after_days`
+(default 60). Then write `wiki-<slug>/config.yml` per `CONVENTIONS.md` §10a with
+the answers (defaults for anything left unanswered) and never ask again.
 
 ```bash
 mkdir -p wiki-<slug>/raw wiki-<slug>/wiki/sources wiki-<slug>/wiki/entities wiki-<slug>/wiki/concepts
-printf '# Log\n' > wiki-<slug>/log.md
+uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py \
+  --wiki-dir wiki-<slug> --op Creation --text "Initialized the wiki."
 ```
+
+`append_log.py` creates `wiki/log.md` (with `# Log`) when it is missing.
 
 ## Step 1 — Detect mode
 
@@ -84,8 +97,9 @@ same orchestrator context as 5.
 
 # Ingest path
 
-You route and delegate. The only files you write yourself are `log.md` and the
-report to the user.
+You route and delegate. The only files you write yourself are `config.yml` (once,
+at creation) and the report to the user; `wiki/log.md` changes only through
+`append_log.py`.
 
 ### 1.0 Route each input
 
@@ -162,7 +176,9 @@ page from a paywall stub.
 ### 1.3 Spawn one writer per new raw artifact
 
 List the existing pages once, and pass them to every writer so they reuse
-canonical slugs instead of inventing near-duplicates:
+canonical slugs instead of inventing near-duplicates. Pass `language` and `tags`
+from `config.yml` to **every** writer agent as inputs, alongside the ones its
+Inputs table lists:
 
 ```bash
 ls wiki-<slug>/wiki/entities wiki-<slug>/wiki/concepts
@@ -188,12 +204,12 @@ two sources that materialize a concept.
 
 Spawn one `agents/page_writer.md` per qualifying slug **that one of this run's new
 pages touched**, in parallel, passing the `source_pages` the script listed for that
-slug. A slug that was already qualifying and that no new page mentions has not
+slug, plus `language` and `tags`. A slug that was already qualifying and that no new page mentions has not
 changed — leave it alone.
 
 ### 1.5 Rewrite the overview
 
-Spawn `agents/overview_writer.md` with the `count_mentions.py` output. It walks
+Spawn `agents/overview_writer.md` with the `count_mentions.py` output, plus `language` and `tags`. It walks
 frontmatter and reads at most 5 full pages.
 
 ### 1.6 Rebuild the index
@@ -206,15 +222,20 @@ Fix anything it reports as an `ERROR:` (a page with no `type`) before moving on.
 
 ### 1.7 Append to the log
 
-```markdown
-## <YYYY-MM-DD> ingest | <what came in>
+Never edit `wiki/log.md` by hand. One block, several bullets, op `Ingest`
+(repeat `--text`; bullets are written in the given order, newest block on top):
 
-- Ingested N notes from `<path>`; skipped M already present (<names>)
-- Source pages: <slugs>
-- New pages: <slug> (concept, 2 sources), ...
-- Updated pages: <slug> (2 → 3 sources), ...
-- Waiting at 1 mention: <slug>, <slug>
+```bash
+uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir wiki-<slug> --op Ingest \
+  --text "Ingested N notes from \`<path>\`; skipped M already present (<names>)." \
+  --text "Source pages: [<title>](sources/<slug>.md), ..." \
+  --text "New pages: [<title>](concepts/<slug>.md) (concept, 2 sources), ..." \
+  --text "Updated pages: [<title>](concepts/<slug>.md) (2 to 3 sources), ..." \
+  --text "Waiting at 1 mention: <slug>, <slug>."
 ```
+
+Links in log text are relative to `wiki/log.md` (`sources/a.md`, no leading `..`).
+The overview rewrite in 1.5 is its own entry, op `Update`.
 
 ### 1.7b Check the open questions
 
@@ -227,7 +248,7 @@ the open question stays until they say so.
 
 New, skipped and refreshed counts by origin, the pages your agents wrote, the wiki
 path, and one line telling the user to open `wiki-<slug>/wiki/index.md` in
-Obsidian. If any slug is sitting
+Obsidian (graph and backlinks work, links are plain relative markdown). If any slug is sitting
 at exactly 1 mention, name a couple — that is the wiki's own to-do list.
 
 ---
@@ -255,11 +276,12 @@ This skill is written for any agent harness. It needs five capabilities:
 | read a file | raw notes, wiki pages |
 | write a file | every page you create |
 | run a shell command | `cp`, `ls`, `mkdir`, the scripts |
-| ask the user | the wiki slug, which wiki to use |
+| ask the user | the wiki slug, which wiki to use, the three `config.yml` questions at creation |
 | spawn a subagent | every page written in this layer |
 
 In Claude Code those are `Read`, `Write`, `Bash`, `AskUserQuestion` and the
-Task/Agent tool. Nothing in this skill pins a model or a tool name — the agent
+Task/Agent tool. `wiki-<slug>/config.yml` is the only per-wiki state outside the
+bundle; read it at Step 0. Nothing in this skill pins a model or a tool name — the agent
 files state a model *preference* in prose, and any harness that can run a
 sub-conversation with a prompt can run them.
 
@@ -277,16 +299,18 @@ Read the file, pass its body as the prompt, collect one JSON receipt.
 
 ## Script reference
 
-All five scripts are PEP 723 single files — `uv` installs their dependencies on
+All six scripts are PEP 723 single files — `uv` installs their dependencies on
 the first run. You run them; the user never does. Paths below are relative to the layer directory.
 
 | Script | Call | Does |
 |---|---|---|
 | `scripts/count_mentions.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>` | Frontmatter walk over source-like pages → `{slug: [pages]}` + the `qualifying` list at ≥2. JSON on stdout, table on stderr. |
-| `scripts/build_index_md.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>` | Regenerates `wiki/index.md` and each `wiki/<subdir>/index.md` from frontmatter, then checks OKF conformance. Deterministic: same input, same bytes. |
+| `scripts/build_index_md.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>` | Regenerates `wiki/index.md` (frontmatter `okf_version: "0.2"`) and each `wiki/<subdir>/index.md` (no frontmatter) from page frontmatter, then checks OKF conformance. Deterministic: same input, same bytes. |
+| `scripts/append_log.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir wiki-<slug> --op <Creation\|Ingest\|Query\|Lint\|Update> --text "..." [--text "..."]` | Inserts one entry block at the top of its date group in `wiki/log.md` (newest first), creating the file or group when missing. Repeat `--text` for several bullets in one block. Optional `--date YYYY-MM-DD`. |
 | `scripts/clone_repo.py` | `--repo <url> --wiki-dir wiki-<slug>` | Shallow-clones into `raw/repos/.github-<owner>-<repo>/`, or refreshes it. JSON receipt with `commit_sha` and `action`. |
 | `scripts/fetch_article.py` | `--url <url> --wiki-dir wiki-<slug>` | `curl` → body isolation → markdown at `raw/article-<slug>.md`. Warns when the body looks like a paywall. |
 | `scripts/fetch_youtube.py` | `--url <url> --wiki-dir wiki-<slug>` | Skeleton. Raises `NotImplementedError` — the workshop exercise in `SOURCES.md`. |
 
 No script writes wiki content. They fetch, they count, they render — every word in
-`wiki/` is written by an agent.
+`wiki/` is written by an agent (the log is the one file a script edits, and only
+through `append_log.py`).

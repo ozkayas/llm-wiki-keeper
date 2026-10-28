@@ -314,6 +314,9 @@ source pages that make the case best.>
 ### Concepts (N)
 - [<Name>](concepts/<slug>.md) — <one line>
 
+### Repos (N)   <!-- only when wiki/repos/ exists -->
+- [<owner>/<repo>](repos/github-<owner>-<repo>/ARCHITECTURE.md) — <one line>
+
 ## Health
 
 - Sources: N · Entities: N · Concepts: N

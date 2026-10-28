@@ -18,6 +18,8 @@ model of your provider). If unavailable, use the harness default.
 | `metadata` | The adapter's receipt: `title`, `source_url`, `authors`, `published_date`. Canonical — do not invent or "improve" it. |
 | `existing_entities` / `existing_concepts` | Lists of `{slug, title}` already in the wiki. Reuse these slugs instead of inventing near-duplicates. |
 | `output_path` | Where to write, e.g. `wiki-<slug>/wiki/sources/<slug>.md`. |
+| `language` | Page language, from `config.yml` (e.g. `en`). Write all prose in it. Slugs, keys and code stay as specified. |
+| `tags` | `optional` or `forbidden`, from `config.yml`. You **never invent tags**, in either mode. `optional`: keep any `tags:` already on an existing page when rewriting. `forbidden`: write none and drop any present. |
 
 ## Process
 
@@ -32,10 +34,18 @@ model of your provider). If unavailable, use the harness default.
    `existing_entities` / `existing_concepts` by slug first; a new slug must follow
    the discipline in `CONVENTIONS.md` §3 (lowercase kebab-case, ASCII, ≤60 chars,
    the slug the page will actually use).
-4. **Write the page** at `output_path`, following `PAGES.md § source` exactly.
-   Every claim cites the raw file: `[[raw/<slug>#<heading>|cite]]`, with a heading
-   anchor when the raw file has headings. Your own judgment goes on the single
-   `> Synthesis:` line and nowhere else.
+4. **Write the page** at `output_path`, following `PAGES.md § source` exactly:
+   `type: source`, `title`, one-sentence `description`, `created`,
+   `generated: { by: llm-wiki-keeper/source_writer, at: <now UTC> }`, a `sources`
+   list (`id: raw` pointing at the raw file; for `article` origin a second entry
+   `id: web` with the URL), and `entities:` / `concepts:` as bundle-relative paths
+   (`/entities/<slug>.md`). Body links are standard relative markdown links
+   (`../concepts/<slug>.md`), never `[[wikilinks]]`. Every claim carries a footnote
+   `[^raw]` (or `[^web]`) defined at the end of the page and linking the raw file
+   with a heading anchor when it has headings. Your own judgment goes on the
+   single `> Synthesis:` line, uncited, and nowhere else. Never write `verified`
+   or `timestamp`. Omit `stale_after` unless the orchestrator supplied one in
+   `metadata`; then copy it verbatim.
 5. **Return the receipt** — one JSON object, nothing else:
 
 ```json
@@ -48,16 +58,16 @@ model of your provider). If unavailable, use the harness default.
 }
 ```
 
-`*_referenced` is what the orchestrator counts against the ≥2 threshold, so it
-must match your frontmatter exactly — including promissory links to pages that do
-not exist yet.
+`*_referenced` holds slugs and is what the orchestrator counts against the ≥2
+threshold, so it must match the paths in your frontmatter exactly (`/concepts/mcp.md`
+becomes `mcp`), including promissory links to pages that do not exist yet.
 
 ## Guardrails
 
 - **One file.** Write `output_path` and nothing else. Never touch `raw/`, another
   source page, the index, or `log.md`.
-- **No floating claims.** Every claim either cites the raw file or is the
-  `> Synthesis:` line.
+- **No floating claims.** Every claim either carries a footnote citing the raw file
+  or is the `> Synthesis:` line.
 - **Be faithful, not generous.** If the note is a three-line stub, write a
   three-line page. A thin note honestly summarized is a useful signal; a padded
   page is noise that every downstream reader pays for.
@@ -69,7 +79,8 @@ not exist yet.
   argumentative text.
 - **Attachments.** A local note's images travel with it into `raw/assets/`. When one
   is genuinely load-bearing — the architecture diagram the note is written around —
-  embed it once in the summary as `![[raw/assets/<file>]]`. Do not open every image,
+  embed it once in the summary as `![<alt>](../../raw/assets/<file>)`. Do not open every image,
   and do not embed one to decorate the page.
-- **Idempotent.** If `output_path` exists, preserve its `created` timestamp and
-  overwrite the rest.
+- **Idempotent.** If `output_path` exists, preserve its `created` and any unknown
+  frontmatter keys, bump `generated.at`, and overwrite the rest. Keep existing
+  `tags` only when `tags` is `optional`.

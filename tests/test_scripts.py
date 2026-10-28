@@ -256,6 +256,48 @@ def test_log_backfill_older_date(wiki: Path):
     assert run("build_index_md.py", "--wiki-dir", str(wiki)).stderr == ""
 
 
+def log_multi(wiki: Path, op: str, texts: list[str], date: str | None = None):
+    args = ["--wiki-dir", str(wiki), "--op", op]
+    for t in texts:
+        args += ["--text", t]
+    if date:
+        args += ["--date", date]
+    return run("append_log.py", *args)
+
+
+def test_log_multi_bullet_order(tmp_path: Path):
+    (tmp_path / "wiki").mkdir()
+    proc = log_multi(tmp_path, "Ingest", ["one", "two\nlines", "three"], "2026-10-27")
+    assert (tmp_path / "wiki/log.md").read_text() == (
+        "# Log\n\n## 2026-10-27\n* **Ingest**: one\n* **Ingest**: two lines\n* **Ingest**: three\n"
+    )
+    assert json.loads(proc.stdout)["bullets"] == 3
+
+
+def test_log_multi_bullet_existing_day(wiki: Path):
+    log_multi(wiki, "Update", ["a", "b"], "2026-10-28")
+    day = (wiki / "wiki/log.md").read_text().split("## 2026-10-28\n")[1].split("\n\n")[0].splitlines()
+    assert day[:2] == ["* **Update**: a", "* **Update**: b"]
+    assert day[2].startswith("* **Query**")
+
+
+def test_log_multi_bullet_backfill(wiki: Path):
+    log_multi(wiki, "Ingest", ["x", "y"], "2026-09-01")
+    text = (wiki / "wiki/log.md").read_text()
+    assert text.rstrip().endswith("## 2026-09-01\n* **Ingest**: x\n* **Ingest**: y")
+    log_multi(wiki, "Lint", ["p", "q"], "2026-10-15")
+    heads = [l[3:] for l in (wiki / "wiki/log.md").read_text().splitlines() if l.startswith("## ")]
+    assert heads == ["2026-10-28", "2026-10-27", "2026-10-15", "2026-09-01"]
+
+
+def test_log_single_bullet_unchanged(tmp_path: Path):
+    (tmp_path / "wiki").mkdir()
+    proc = log(tmp_path, "Query", "  spaced\n out ", "2026-10-27")
+    assert (tmp_path / "wiki/log.md").read_text() == "# Log\n\n## 2026-10-27\n* **Query**: spaced out\n"
+    out = json.loads(proc.stdout)
+    assert out["entry"] == "* **Query**: spaced out" and out["bullets"] == 1
+
+
 def test_log_default_date_is_today(tmp_path: Path):
     from datetime import date
 
