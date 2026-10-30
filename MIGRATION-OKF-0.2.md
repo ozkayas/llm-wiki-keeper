@@ -256,3 +256,59 @@ link the folder's index.md instead".
 
 **Reason.** A link that Obsidian cannot resolve is not harmless: a click writes a stray note outside the bundle.
 Linking the folder's `index.md` resolves to a real file and keeps the output deterministic.
+
+## 16. Lint (Karpathy's third operation): design
+
+Decided 2026-10-30. Promissory links stay (user chose option A), so lint must handle hollow links and the empty stubs
+Obsidian creates when one is clicked.
+
+**Two tiers.** A deterministic script (`scripts/lint.py`, read-only) and an LLM review (`agents/lint_reviewer.md`, read-only,
+Sonnet-class, one per page group) for what a script cannot judge. The orchestrator merges both into one report.
+
+### 16.1 Deterministic checks (`lint.py`)
+
+Output: JSON `{findings: [{id, severity, file, line, message, fix_hint}], summary: {error, warn, info}, config, checked_pages}` on stdout,
+a human table on stderr, exit 1 when any `error` exists. Flags: `--wiki-dir`, `--now <ISO>` (for tests), `--json-only`.
+
+| id | name | severity | rule |
+|---|---|---|---|
+| L01 | uncited-prose | warn | On pages of type source, entity, concept, overview, note, repo, repo_note: any paragraph or list item that has no `[^id]` reference and is not a `> Synthesis:` line. Exempt: headings, tables, fenced code and mermaid blocks, footnote definitions, blockquote metadata lines, list items consisting only of links, frontmatter. question, open_question, index and log pages are not checked. |
+| L02 | empty-stub | error | A `.md` file (outside `raw/` and `.obsidian/`) with no non-whitespace content, or with no frontmatter and no body. Typical cause: a click on a hollow link. |
+| L03 | stray-outside-bundle | warn | Anything in `wiki-<slug>/` that is not `config.yml`, `raw/`, `wiki/` or `.obsidian/` (for example the `entities/` folder Obsidian creates). |
+| L04 | broken-link | error | A relative markdown link or a frontmatter reference wikilink whose target does not exist and is not promissory. Promissory = target under `entities/` or `concepts/` whose slug has fewer than 2 source mentions. Heading anchors are checked against heading text. |
+| L05 | missing-page | error | A slug with 2 or more mentions (the `count_mentions.py` rule) and no page. |
+| L06 | premature-page | warn | An entity or concept page whose slug has fewer than 2 mentions. |
+| L07 | orphan | warn | A page (not index, log, overview) with no inbound link from any other page. |
+| L08 | stale | warn | `stale_after` is at or before now; or a `status: deprecated` page still linked from a page that is not deprecated. |
+| L09 | footnote-integrity | error | A `[^id]` reference without definition, a definition never used, an id missing from `sources[].id`, a `sources[].resource` that points at a missing local file. |
+| L10 | index-drift | warn | A generated `index.md` that differs from what `build_index_md.py` would write now (computed in memory or in a temp copy; lint never writes). |
+| L11 | tags-policy | warn | Any `tags` present while `config.yml` says `tags: forbidden`. |
+| L12 | trust-summary | info | Counts per trust tier (unverified, machine-confirmed, human-reviewed, OKF §5.3) and per `status`. Never a failure. |
+| L13 | conformance | error/warn | The conformance results of `build_index_md.py` (run as a subprocess, results merged, severities kept). |
+| L14 | config-missing | info | No `config.yml`: defaults were used. |
+| L15 | timestamp-sanity | warn | `created` or `generated.at` in the future, or `created` later than `generated.at`. |
+
+Lint never fixes anything by itself.
+
+### 16.2 LLM review (`agents/lint_reviewer.md`)
+
+One reviewer per group of at most 6 pages, read-only, returns one JSON receipt of findings. It may read the cited source pages and,
+for the spot check, the single raw file a source page cites. Checks:
+
+| id | name | severity | rule |
+|---|---|---|---|
+| C01 | contradiction | warn | Two pages assert incompatible things about the same subject. Quote both, with paths. |
+| C02 | unsupported-claim | warn | A footnoted claim that the cited source (or raw note) does not state. Spot check at least 4 claims per page. |
+| C03 | missing-cross-reference | info | A page names an entity or concept that has a page, without linking it. |
+| C04 | data-gap | info | Waiting slugs worth ingesting a second source for; open questions that the current pages now answer (report only; a human decides). |
+| C05 | interpretation-in-prose | warn | Interpretation, comparison or inference stated as sourced fact outside a `> Synthesis:` line (the judgment version of L01). |
+
+### 16.3 Regimes, report and log
+
+- Lint is **read-only on all ingest-owned and interaction-owned pages** (same rule as query mode).
+- It writes one report page `wiki/lint/YYYY-MM-DD.md` (type `lint_report`, `generated.by: llm-wiki-keeper/orchestrator`; a second run on the same day overwrites it). `lint/` is an interaction-owned folder with a generated `index.md`.
+- Log: one `**Lint**` bullet via `append_log.py`: counts by severity and a link to the report.
+- Findings C04 may be appended to `open-questions.md` as dated bullets (append-only, as in query mode); nothing else is written outside `lint/`.
+- Fixes are a separate, user-confirmed step: the orchestrator may (a) delete empty stubs (L02, L03 folders that are empty), after listing them and getting a yes, (b) re-run `build_index_md.py` (L10). Content findings are never auto-fixed; they go to the next ingest or to a human edit.
+- Mode detection: lint iff the user says lint, health check, audit, "check the wiki" or similar. Ambiguity resolves to query, as before.
+- `config.yml` keys used: `tags`, `stale_after_days` (L08 also reports a page whose `generated.at` is older than `stale_after_days` and whose source is a web article or a repo, as info).
