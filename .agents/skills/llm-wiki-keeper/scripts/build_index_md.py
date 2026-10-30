@@ -9,8 +9,8 @@ re-run, and you get byte-identical files back.
 
 Writes:
   wiki/index.md               only file with frontmatter: `okf_version: "0.2"`
-  wiki/<subdir>/index.md      no frontmatter; `* [Title](file.md) - description`
-  wiki/repos/index.md         one entry per repo dir, linking to `<repo>/`
+  wiki/<subdir>/index.md      no frontmatter; `* [Title](file.md) - description`; links always target files
+  wiki/repos/index.md         one entry per repo dir, linking to `<repo>/index.md`
   wiki/repos/<repo>/index.md  that repo's pages
 
 Also runs an OKF conformance check: ERRORs (exit 1) and WARNings go to stderr.
@@ -28,6 +28,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import yaml
 
@@ -51,6 +52,13 @@ STATUSES = {"draft", "stable", "deprecated"}
 # Page-reference keys: quoted wikilinks relative to the bundle root, e.g. "[[concepts/mcp]]" (MIGRATION section 14).
 REFERENCE_KEYS = ("entities", "concepts", "related", "answer_doc", "sources_cited", "spawned_by_question", "repo")
 WIKILINK_VALUE_RE = re.compile(r"^\[\[[^\[\]\n]+\]\]$")
+MD_LINK_RE = re.compile(r"!?\[[^\]\n]*\]\(\s*<?([^)\s>]+)>?(?:\s+[^)]*)?\)")
+EXTERNAL_RE = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//|#|/)")
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
+DIR_LINK_MSG = (
+    "link points at a directory; Obsidian creates an empty note when it is clicked; "
+    "link the folder's index.md instead"
+)
 
 
 class _Loader(yaml.SafeLoader):
@@ -133,7 +141,7 @@ def render_repos_index(root: Path, heading: str) -> str | None:
     dirs = repo_dirs(root)
     if not dirs:
         return None
-    lines = [entry(d.name, f"{d.name}/", plural(len(page_files(d)))) for d in dirs]
+    lines = [entry(d.name, f"{d.name}/index.md", plural(len(page_files(d)))) for d in dirs]
     return f"# {heading}\n\n" + "\n".join(lines) + "\n"
 
 
@@ -147,12 +155,12 @@ def render_root_index(bundle: Path) -> str:
     if singles:
         blocks.append("# Pages\n\n" + "\n".join(singles))
     browse = [
-        entry(heading, f"{subdir}/", plural(len(page_files(bundle / subdir))))
+        entry(heading, f"{subdir}/index.md", plural(len(page_files(bundle / subdir))))
         for subdir, heading in SUBDIRS
         if page_files(bundle / subdir)
     ]
     browse += [
-        entry(heading, f"{subdir}/", plural(sum(len(page_files(d)) for d in repo_dirs(bundle / subdir))))
+        entry(heading, f"{subdir}/index.md", plural(sum(len(page_files(d)) for d in repo_dirs(bundle / subdir))))
         for subdir, heading in NESTED_SUBDIRS
         if repo_dirs(bundle / subdir)
     ]
@@ -242,6 +250,24 @@ def check_page(rel: Path, state: str, fm: dict[str, Any], body: str, fatal: list
                 _ts_problem("verified[].at", v["at"], rel, warn)
 
 
+def check_dir_links(path: Path, rel: Path, warn: list[str]) -> None:
+    """Warn on every markdown link whose relative target is a directory."""
+    in_fence = False
+    for n, line in enumerate(path.read_text(errors="replace").splitlines(), start=1):
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        for m in MD_LINK_RE.finditer(re.sub(r"`[^`\n]*`", "", line)):
+            target = m.group(1)
+            if EXTERNAL_RE.match(target):
+                continue
+            raw = unquote(target.split("#", 1)[0].split("?", 1)[0])
+            if raw and (raw.endswith("/") or (path.parent / raw).is_dir()):
+                warn.append(f"{rel}:{n}: `{target}`: {DIR_LINK_MSG}")
+
+
 def check_log(log: Path, rel: Path, warn: list[str]) -> None:
     dates: list[str] = []
     for n, line in enumerate(log.read_text(errors="replace").splitlines(), start=1):
@@ -260,6 +286,7 @@ def check_conformance(wiki_dir: Path, bundle: Path) -> tuple[list[str], list[str
     warn: list[str] = []
     for path in sorted(bundle.rglob("*.md")):
         rel = path.relative_to(wiki_dir)
+        check_dir_links(path, rel, warn)
         if path.name == "index.md":
             if path != bundle / "index.md" and path.read_text().startswith("---"):
                 warn.append(f"{rel}: a non-root index.md must not carry frontmatter")

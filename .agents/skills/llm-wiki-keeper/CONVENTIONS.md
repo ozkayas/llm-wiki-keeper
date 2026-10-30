@@ -303,7 +303,8 @@ bundle. The parts we honour:
 - only the bundle root `wiki/index.md` has frontmatter, and it declares
   `okf_version: "0.2"`; subdirectory indexes have none, entries read
   `* [Title](relative-path) - description`, and a subdirectory entry reads
-  `* [Name](dir/) - N pages`;
+  `* [Name](dir/index.md) - N pages` (a link to a folder is never written: Obsidian
+  creates an empty note when it is clicked);
 - provenance via `sources`, `generated`, optional `status` / `stale_after` /
   `verified`; `timestamp` is gone;
 - log newest first, date-grouped, bold operation word;
@@ -493,6 +494,7 @@ Query-path pages (`questions/`, `notes/`, `open-questions.md`) carry
    That is why the reference keys use wikilinks.
 6. `sources[].resource` paths in frontmatter are therefore not clickable either, by design,
    because OKF defines them.
+7. Clicking a link to a page that does not exist yet (a promissory link) makes Obsidian create an empty note, in the vault root under the path written in the link, which is outside wiki/ when the vault root is wiki-<slug>/. Do not click hollow graph nodes or unresolved links; lint should flag empty stub notes.
 
 The Obsidian setting Settings > Editor > "Properties in document" = Hidden or Source removes
 the visual noise.

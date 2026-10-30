@@ -8,9 +8,9 @@ okf_version: "0.2"
 
 # Browse
 
-* [Sources](sources/) - 2 pages
-* [Entities](entities/) - 1 page
-* [Concepts](concepts/) - 1 page
-* [Questions](questions/) - 1 page
-* [Notes](notes/) - 1 page
-* [Repos](repos/) - 1 page
+* [Sources](sources/index.md) - 2 pages
+* [Entities](entities/index.md) - 1 page
+* [Concepts](concepts/index.md) - 1 page
+* [Questions](questions/index.md) - 1 page
+* [Notes](notes/index.md) - 1 page
+* [Repos](repos/index.md) - 1 page

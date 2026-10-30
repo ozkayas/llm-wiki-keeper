@@ -6,6 +6,7 @@ Run from the repo root:  uv run --with pytest --with pyyaml pytest tests/
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -86,11 +87,43 @@ def test_entry_format(wiki: Path):
     assert sources.startswith("# Sources\n\n")
     assert "* [Alpha note](alpha.md) - Summary of the Alpha note raw note.\n" in sources
     root = (bundle / "index.md").read_text()
-    assert "* [Concepts](concepts/) - 1 page\n" in root
-    assert "* [Repos](repos/) - 1 page\n" in root
+    assert "* [Concepts](concepts/index.md) - 1 page\n" in root
+    assert "* [Repos](repos/index.md) - 1 page\n" in root
     assert "[[" not in root
     assert "index.md" not in sources and "log.md" not in root.replace("log.md)", "")
     assert "* [demo-repo overview](overview.md)" in (bundle / "repos/demo-repo/index.md").read_text()
+
+
+def test_index_links_target_files_only(wiki: Path):
+    proc = run("build_index_md.py", "--wiki-dir", str(wiki))
+    bundle = wiki / "wiki"
+    assert "(repos/index.md)" in (bundle / "index.md").read_text()
+    assert "* [demo-repo](demo-repo/index.md) - 1 page\n" in (bundle / "repos/index.md").read_text()
+    link = re.compile(r"\]\(([^)]+)\)")
+    for p in bundle.rglob("index.md"):
+        for target in link.findall(p.read_text()):
+            assert not target.endswith("/")
+            assert (p.parent / target).is_file(), (p, target)
+    assert "directory" not in proc.stderr
+
+
+@pytest.mark.parametrize("target", ["../concepts/", "../concepts", "../repos/demo-repo"])
+def test_directory_link_warns(wiki: Path, target: str):
+    write_page(wiki, "notes/d.md", f"---\ntype: note\ndescription: D\n---\n\nSee [x]({target}).\n")
+    proc = run("build_index_md.py", "--wiki-dir", str(wiki))
+    assert "link points at a directory; Obsidian creates an empty note when it is clicked" in proc.stderr
+    assert "link the folder's index.md instead" in proc.stderr
+    assert "ERROR" not in proc.stderr
+
+
+def test_file_and_external_links_do_not_warn(wiki: Path):
+    write_page(
+        wiki,
+        "notes/f.md",
+        "---\ntype: note\ndescription: D\n---\n\n[a](../concepts/index.md) [b](https://x.org/dir/) [c](#h) "
+        "[d](../concepts/missing.md)\n\n```\n[e](../concepts/)\n```\n",
+    )
+    assert run("build_index_md.py", "--wiki-dir", str(wiki)).stderr == ""
 
 
 def test_reserved_files_not_listed(wiki: Path):

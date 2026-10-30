@@ -129,10 +129,10 @@ okf_version: "0.2"
 # Sources
 
 * [Title](sources/my-note.md) - description
-* [Subdirectory](concepts/) - 12 pages
+* [Subdirectory](concepts/index.md) - 12 pages
 ```
 
-Subdirectory `index.md` files have **no frontmatter at all**. Entries use `* [Title](relative-path) - description`.
+Subdirectory `index.md` files have **no frontmatter at all**. Entries use `* [Title](relative-path) - description`, and every link targets a file (§15).
 Same input gives the same bytes. Deleting every `index.md` and re-running the script restores them.
 
 **`wiki/log.md`**: newest first, date-grouped, ISO dates (§9):
@@ -241,3 +241,18 @@ Legacy `/x/y.md` and `[[wiki/x/y]]` are still counted; `build_index_md.py` warns
 **Cost.** These keys are the one place the skill emits wikilinks. The body rule is unchanged: bodies use standard relative
 markdown links and `[[wikilinks]]` stay forbidden there. This is a producer-defined extension; OKF §4.1 allows extra keys,
 so the bundle stays conformant. Receipts still return slugs.
+
+## 15. Index links point at files
+
+**Bug.** `build_index_md.py` wrote subdirectory entries as directory links, for example `* [Sources](sources/) - 4 pages`
+in `wiki/index.md` and `[repo](repo/)` in the repos index. Obsidian does not understand a link to a folder: clicking it
+creates an empty note named `sources` at the vault root. A real user hit this.
+
+**Fix.** Every link in a generated `index.md` points at a file: `* [Sources](sources/index.md) - 4 pages`, and
+`repos/index.md` links `github-x-y/index.md`. OKF 0.2 §8 allows it, since an `index.md` is a normal file link.
+`build_index_md.py` also warns about any markdown link in any wiki page or index whose relative target ends with `/` or
+resolves to an existing directory: "link points at a directory; Obsidian creates an empty note when it is clicked;
+link the folder's index.md instead".
+
+**Reason.** A link that Obsidian cannot resolve is not harmless: a click writes a stray note outside the bundle.
+Linking the folder's `index.md` resolves to a real file and keeps the output deterministic.
