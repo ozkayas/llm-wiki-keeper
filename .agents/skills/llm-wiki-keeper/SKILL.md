@@ -45,7 +45,7 @@ Glob `wiki-*/` in the project root and keep the ones that contain both `raw/` an
 |---|---|
 | exactly 1 | Use it. |
 | more than 1 | Ask the user which one. |
-| 0, ingest mode | Propose a slug from the topic of the incoming notes (kebab-case, e.g. `ai-engineering`), confirm it with the user, then create the wiki. |
+| 0, ingest mode | Propose a slug from the topic of the incoming notes (kebab-case, e.g. `ai-engineering`), confirm it with the user, then create the wiki. With no ask-user capability, use the proposed slug and say so in your report. |
 | 0, query mode | Say there is no wiki yet and stop. Do not create one to answer a question. |
 
 Creating a wiki (ingest mode, slug confirmed):
@@ -138,7 +138,7 @@ For each input compute its raw path from the routing table — for a local note
 `raw/<slug>.md`, where `<slug>` is the **filename stem**, slugified: lowercase,
 every run of non-alphanumeric characters (dots and punctuation included)
 collapsed to a single `-`, leading/trailing `-` stripped, ASCII only, truncated to
-60 characters at a `-` boundary (`CLAUDE.md` is `claude-md`). The
+60 characters (if the cut lands inside a word, go back to the previous `-`; `CLAUDE.md` is `claude-md`). The
 adapters derive their own slugs the same way, from the URL's last path segment or
 from `<owner>-<repo>`.
 
@@ -217,6 +217,8 @@ Add `2>/dev/null` when you only need the JSON (the table goes to stderr). The `q
 counted across `wiki/sources/` **and** `wiki/repos/*/`, so a repo can be one of the
 two sources that materialize a concept.
 
+Slugs at 1 mention get no page; list them as waiting.
+
 Spawn one `agents/page_writer.md` per qualifying slug **that one of this run's new
 pages touched**, in parallel, passing the `source_pages` the script listed for that
 slug, plus `language` and `tags`. A slug that was already qualifying and that no new page mentions has not
@@ -229,11 +231,7 @@ frontmatter and reads at most 5 full pages.
 
 ### 1.6 Rebuild the index
 
-```bash
-uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>
-```
-
-Fix anything it reports as an `ERROR:` (a page with no `type`) before moving on.
+Do it once, at the end of 1.7, after every log entry (the `Ingest` call and the overview's `Update` call) has been appended.
 
 ### 1.7 Append to the log
 
@@ -254,6 +252,12 @@ One call with several `--text` produces **one bullet line per `--text`**, all un
 the same bold op word (`**Ingest**`), in the given order.
 The overview rewrite in 1.5 is logged by a **separate `Update` call made after the
 `Ingest` call**, so `Update` shows above `Ingest` in the newest-first log. That is expected.
+
+Then run the index rebuild of 1.6, once. Fix anything it reports as an `ERROR:` (a page with no `type`) before moving on.
+
+```bash
+uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>
+```
 
 ### 1.7b Check the open questions
 
@@ -335,7 +339,7 @@ the first run. You run them; the user never does. Paths below are relative to th
 | `scripts/count_mentions.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>` | Frontmatter walk over source-like pages → `{slug: [pages]}` + the `qualifying` list at ≥2. JSON on stdout, table on stderr. |
 | `scripts/build_index_md.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>` | Regenerates `wiki/index.md` (frontmatter `okf_version: "0.2"`) and each `wiki/<subdir>/index.md` (no frontmatter) from page frontmatter, then checks OKF conformance. Deterministic: same input, same bytes. |
 | `scripts/append_log.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir wiki-<slug> --op <Creation\|Ingest\|Query\|Lint\|Update> --text "..." [--text "..."]` | Inserts one entry block at the top of its date group in `wiki/log.md` (newest first), creating the file or group when missing. Repeat `--text` for several bullets in one block. Optional `--date YYYY-MM-DD`. |
-| `scripts/lint.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/lint.py --wiki-dir wiki-<slug> --json-only 2>/dev/null` | Read-only deterministic checks L01–L15. JSON `{findings, summary, config, checked_pages}` on stdout, table on stderr, exit 1 when an error exists. |
+| `scripts/lint.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/lint.py --wiki-dir wiki-<slug> --json-only 2>/dev/null` | Read-only deterministic checks L01–L15. JSON `{findings, summary, config, checked_pages, pages}` on stdout, table on stderr, exit 1 when an error exists. |
 | `scripts/clone_repo.py` | `--repo <url> --wiki-dir wiki-<slug>` | Shallow-clones into `raw/repos/.github-<owner>-<repo>/`, or refreshes it. JSON receipt with `commit_sha` and `action`. |
 | `scripts/fetch_article.py` | `--url <url> --wiki-dir wiki-<slug>` | `curl` → body isolation → markdown at `raw/article-<slug>.md`. Warns when the body looks like a paywall. |
 | `scripts/fetch_youtube.py` | `--url <url> --wiki-dir wiki-<slug>` | Skeleton. Raises `NotImplementedError` — the workshop exercise in `SOURCES.md`. |

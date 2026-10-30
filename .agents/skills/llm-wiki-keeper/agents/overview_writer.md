@@ -48,7 +48,7 @@ You receive no `now` input.
    one-sentence `description`, `created`,
    `generated: { by: llm-wiki-keeper/overview_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, `sources`
    (only the pages your theme paragraphs actually cite, with `resource` relative to
-   `wiki/`, e.g. `sources/<slug>.md`), `total_sources`. Do not write `total_pages`; it is derived data. Theme
+   `wiki/`, e.g. `sources/<slug>.md`). Do not write `total_pages`, `total_sources` or any other `total_*` key; they are derived data and go stale. Theme
    paragraphs cite with footnotes `[^id]` keyed to `sources[].id`; links are
    standard relative markdown links from `wiki/` (`concepts/mcp.md`, no `../`),
    never `[[wikilinks]]`. Include the Repos section when `wiki/repos/` exists.
@@ -59,7 +59,7 @@ You receive no `now` input.
 5. Return the receipt:
 
 ```json
-{"page": "wiki/overview.md", "total_sources": 12, "themes": 4, "full_reads": 3}
+{"page": "wiki/overview.md", "themes": 4, "full_reads": 3}
 ```
 
 ## Guardrails

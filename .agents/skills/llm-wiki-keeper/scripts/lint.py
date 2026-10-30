@@ -9,7 +9,7 @@ Read-only: nothing is written to the wiki, no network. L10 and L13 run `build_in
 
 Output: JSON on stdout
   {findings: [{id, severity, file, line, message, fix_hint}], summary: {error, warn, info},
-   config, checked_pages}
+   config, checked_pages (int), pages (sorted list of the checked page paths)}
 and a human table on stderr (suppressed by --json-only). Exit 1 when any `error` exists.
 Findings are ordered by (severity, file, line, id); `file` is relative to --wiki-dir.
 
@@ -58,6 +58,9 @@ FOOT_DEF_RE = re.compile(r"^\s{0,3}\[\^([^\]\s]+)\]:")
 FOOT_REF_RE = re.compile(r"\[\^([^\]\s]+)\](?!:)")
 META_BQ_RE = re.compile(r"^>\s*\**[A-Za-z][\w /-]{0,30}\**:")
 INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+ATTRIB_RE = re.compile(r"\u2014\s*\[[^\]]+\]\([^)]+\)\s*$")
+INDEX_ITEM_RE = re.compile(r"^\[[^\]]+\]\([^)]+\)\s+[-\u2014]\s+\S")
+RAW_LINE_RE = re.compile(r"^>\s*\[Raw\]\([^)]*\)")
 BLOCK_ID_RE = re.compile(r"^(\^|L\d+(-L?\d+)?$)")
 
 
@@ -319,6 +322,7 @@ def check_l01(ctx: Ctx) -> None:
         cur: dict[str, Any] | None = None
         in_fence = in_foot = False
         seen_h1 = def_used = False
+        section = ""  # lowercased text of the current H2 (H3 and deeper keep it)
 
         def flush() -> None:
             nonlocal cur
@@ -349,11 +353,16 @@ def check_l01(ctx: Ctx) -> None:
                 flush()
                 if re.match(r"#\s", line):
                     seen_h1 = True
+                    section = ""
+                else:
+                    hm = re.match(r"\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$", line)
+                    if hm and len(hm.group(1)) == 2:
+                        section = hm.group(2).strip().lower()
                 continue
             m = LIST_RE.match(line)
             if m:
                 flush()
-                cur = {"line": n, "text": m.group(3), "kind": "list"}
+                cur = {"line": n, "text": m.group(3), "kind": "list", "section": section}
             elif stripped.startswith(">"):
                 if cur and cur["kind"] == "quote":
                     cur["text"] += " " + stripped.lstrip(">").strip()
@@ -377,6 +386,15 @@ def check_l01(ctx: Ctx) -> None:
                 continue
             if u["kind"] == "quote" and META_BQ_RE.match(text):
                 continue
+            if u["kind"] == "quote" and RAW_LINE_RE.match(text):
+                continue  # the `> [Raw](...) · local` pointer line of a source page
+            if u["kind"] == "quote" and ATTRIB_RE.search(text):
+                continue  # verbatim quote whose attribution link points at the raw heading
+            if u["kind"] == "list":
+                if page.type == "overview" and u.get("section") in ("index", "health"):
+                    continue  # the Index mirrors page descriptions, Health holds counts
+                if u.get("section") == "index" and INDEX_ITEM_RE.match(text):
+                    continue  # `[Name](path) - description` in an Index section
             if u["kind"] == "quote" and u.get("defn") and u["lines"] == 1 and page.type in DEFINITION_TYPES:
                 continue  # one-line definition blockquote right after the H1 (mirrors `description`)
             residue = re.sub(r"!?\[[^\]]*\]\([^)]*\)|\[\[[^\]]*\]\]|https?://\S+", "", text)
@@ -524,8 +542,8 @@ def check_l08_time(ctx: Ctx) -> None:
 
 def check_l09(ctx: Ctx) -> None:
     for page in ctx.pages:
-        if page.reserved:
-            continue
+        if page.reserved or page.type == "lint_report":
+            continue  # a report quotes other pages' footnote syntax; it cites nothing
         refs: dict[str, int] = {}
         defs: dict[str, int] = {}
         for n, line in code_free_lines(page):
@@ -682,7 +700,7 @@ def load_config(wiki_dir: Path) -> dict[str, Any]:
     return cfg
 
 
-def lint(wiki_dir: Path, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any], int]:
+def lint(wiki_dir: Path, now: datetime) -> tuple[list[dict[str, Any]], dict[str, Any], list[str]]:
     bundle = wiki_dir / "wiki"
     ctx = Ctx(wiki_dir, bundle, now, load_config(wiki_dir))
     ctx.pages = [parse_page(p, wiki_dir) for p in sorted(bundle.rglob("*.md"))]
@@ -710,7 +728,7 @@ def lint(wiki_dir: Path, now: datetime) -> tuple[list[dict[str, Any]], dict[str,
             unique.append(f)
     unique.sort(key=lambda f: (SEV_RANK[f["severity"]], f["file"] or "", f["line"] or 0, f["id"], f["message"]))
     config = {k: ctx.config[k] for k in ("language", "tags", "stale_after_days", "source")}
-    checked = sum(1 for p in ctx.pages if not p.reserved)
+    checked = sorted(p.rel for p in ctx.pages if not p.reserved)
     return unique, config, checked
 
 
@@ -734,8 +752,9 @@ def main() -> None:
         for f in findings:
             loc = (f["file"] or "-") + (f":{f['line']}" if f["line"] else "")
             print(f"{f['id']}  {f['severity']:<5}  {loc}  {f['message']}", file=sys.stderr)
-        print(f"{summary['error']} error, {summary['warn']} warn, {summary['info']} info ({checked} pages)", file=sys.stderr)
-    print(json.dumps({"findings": findings, "summary": summary, "config": config, "checked_pages": checked}, indent=2))
+        print(f"{summary['error']} error, {summary['warn']} warn, {summary['info']} info ({len(checked)} pages)", file=sys.stderr)
+    print(json.dumps({"findings": findings, "summary": summary, "config": config,
+                      "checked_pages": len(checked), "pages": checked}, indent=2))
     if summary["error"]:
         raise SystemExit(1)
 

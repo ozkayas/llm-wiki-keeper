@@ -308,7 +308,6 @@ sources:
   - id: <page-slug>
     resource: sources/<page-slug>.md     # or concepts/..., entities/...
     title: <page title>
-total_sources: <int>
 ---
 
 # <slug> — Overview
@@ -341,7 +340,7 @@ what they have in common, goes on a `> Synthesis:` line.>
 The overview must **link** every waiting slug it lists (a promissory link is fine),
 so each shows as a hollow node in the graph. The overview carries no page total
 (it would go stale, and the overview is counted while it is being written); the
-`## Health` section keeps the per-type counts.
+`## Health` section keeps the per-type counts, in body text only. No `total_*` key, ever, in the frontmatter.
 
 `sources` lists the pages the theme paragraphs actually cite through footnotes
 (not every page that appears in the Index or Health lists); each id has a
@@ -373,7 +372,6 @@ sources:
   - id: tool-servers
     resource: sources/tool-servers.md
     title: Writing tool servers
-total_sources: 2
 ---
 
 # ai-notes — Overview
@@ -835,8 +833,12 @@ generated: { by: llm-wiki-keeper/orchestrator, at: 2026-10-28T11:05:00Z }
 
 Written by the orchestrator (`LINT.md` L.5). A second run on the same day overwrites it.
 It **reports and cites nothing**: no `sources` list, no footnotes, no `> Synthesis:`
-lines. Every finding links to the page it is about with a standard relative markdown
-link (the report sits in `wiki/lint/`, so links start with `../`).
+lines. Every finding is written as `path:line`, the finding id, and a **paraphrased**
+one-line message, never the script's text pasted in. Any literal markdown-looking text
+from a message or hint (footnote syntax, links) goes inside backticks, never bare, or
+the report would parse as having broken footnotes and links itself. Links from the
+report to wiki pages are relative to `wiki/lint/` (`../sources/x.md`), computed by the
+orchestrator.
 
 ```markdown
 ---
@@ -856,7 +858,7 @@ generated: { by: llm-wiki-keeper/orchestrator, at: <ISO-8601 UTC> }
 | info | <n> |
 
 ## Errors
-- **<id> <name>**: [<page>](../<path>.md) line <n>. <message> Fix: <fix_hint>
+- **<id> <name>**: [<path>:<line>](../<path>.md). <paraphrased message> Fix: <paraphrased fix_hint>
 
 ## Warnings
 - ...

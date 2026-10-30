@@ -127,7 +127,7 @@ def test_demo_fixture_findings_are_pinned():
 
 def test_json_shape(wiki: Path):
     _, data = lint(wiki)
-    assert set(data) == {"findings", "summary", "config", "checked_pages"}
+    assert set(data) == {"findings", "summary", "config", "checked_pages", "pages"}
     assert set(data["summary"]) == {"error", "warn", "info"}
     assert data["config"]["tags"] == "optional" and data["config"]["stale_after_days"] == 60
     assert data["checked_pages"] == 7
@@ -552,3 +552,107 @@ def test_l15_created_after_generated_at(wiki: Path):
     _, data = lint(wiki)
     (f,) = of(data, "L15")
     assert "later than" in f["message"] and f["severity"] == "warn"
+
+
+# --- lint report self-errors, overview Index/Health, `pages` (MIGRATION section 18) ---
+
+
+def test_json_pages_is_sorted_list_of_checked_pages(wiki: Path):
+    _, data = lint(wiki)
+    assert data["pages"] == sorted(data["pages"])
+    assert data["checked_pages"] == len(data["pages"])
+    assert "wiki/sources/alpha.md" in data["pages"]
+    assert not any(p.endswith("index.md") or p.endswith("log.md") for p in data["pages"])
+
+
+REPORT_BODY = """
+# Lint report
+
+- **L09**: `[^id]` is referenced but has no definition. Fix: add `[^id]: [title](path)`.
+- **L04**: broken link `[x](sources/y.md)`.
+
+```markdown
+Fenced: [^other] and [z](sources/none.md)
+```
+"""
+
+
+def test_report_page_with_code_quoted_syntax_has_no_l04_l09(wiki: Path):
+    write(wiki, "wiki/lint/2026-10-30.md", page("lint_report", body=REPORT_BODY))
+    _, data = lint(wiki)
+    bad = [f for f in data["findings"] if f["id"] in ("L04", "L09", "L01") and f["file"] == "wiki/lint/2026-10-30.md"]
+    assert bad == [], bad
+
+
+def test_l04_ignores_links_in_code_spans_and_fences_on_any_page(wiki: Path):
+    write(wiki, "wiki/notes/scratch.md", page("note", body="Sample `[x](sources/nope.md)` text.[^alpha]\n\n```\n[y](sources/nope2.md)\n```\n\n[^alpha]: [Alpha](../sources/alpha.md)"))
+    _, data = lint(wiki)
+    assert [f for f in of(data, "L04") if f["file"] == "wiki/notes/scratch.md"] == []
+
+
+def test_l09_still_fires_on_bare_footnote_in_a_normal_page(wiki: Path):
+    write(wiki, "wiki/notes/scratch.md", page("note", body="Bare [^ghost] ref."))
+    _, data = lint(wiki)
+    assert any(f["file"] == "wiki/notes/scratch.md" for f in of(data, "L09"))
+
+
+def test_l09_skips_lint_report_pages_entirely(wiki: Path):
+    write(wiki, "wiki/lint/2026-10-30.md", page("lint_report", body="Bare [^ghost] ref.\n\n[^unused]: x"))
+    _, data = lint(wiki)
+    assert [f for f in of(data, "L09") if f["file"].startswith("wiki/lint/")] == []
+
+
+def test_l01_overview_index_and_health_items_exempt_but_theme_prose_not(wiki: Path):
+    p = wiki / "wiki/overview.md"
+    p.write_text(p.read_text().replace("[^alpha]: [Alpha note](sources/alpha.md)", "") + """
+Uncited theme sentence.
+
+## Index
+
+### Entities (1)
+- [Claude Code](entities/claude-code.md) - A coding agent harness.
+
+## Health
+
+- Sources: 2 · Entities: 1 · Concepts: 1
+- Slugs waiting: [mongosh](entities/mongosh.md)
+
+[^alpha]: [Alpha note](sources/alpha.md)
+""")
+    _, data = lint(wiki)
+    lines = [f["line"] for f in of(data, "L01") if f["file"] == "wiki/overview.md"]
+    assert len(lines) == 1, of(data, "L01")
+
+
+def test_l01_index_item_shape_exempt_only_in_index_section(wiki: Path):
+    body = """
+## Index
+
+- [Alpha](../sources/alpha.md) - A short description.
+- [Beta](../sources/beta.md) — Another description.
+- [Beta](../sources/beta.md) with a loose claim in an index.
+
+## Other
+
+- [Alpha](../sources/alpha.md) - Same shape outside an Index section.
+"""
+    write(wiki, "wiki/notes/scratch.md", page("note", body=body))
+    _, data = lint(wiki)
+    msgs = [f["message"] for f in of(data, "L01") if f["file"] == "wiki/notes/scratch.md"]
+    assert len(msgs) == 2, msgs
+    assert any("loose claim" in m for m in msgs) and any("Same shape" in m for m in msgs)
+
+
+def test_l01_raw_pointer_and_attributed_quote_exempt(wiki: Path):
+    body = """
+> [Raw](../../raw/alpha.md) · local
+
+> "A verbatim sentence."
+> — [Heading](../../raw/alpha.md#Heading)
+
+> "A quote with no attribution link."
+"""
+    write(wiki, "wiki/notes/scratch.md", page("note", body=body))
+    _, data = lint(wiki)
+    msgs = [f["message"] for f in of(data, "L01") if f["file"] == "wiki/notes/scratch.md"]
+    assert len(msgs) == 1 and "no attribution" in msgs[0], msgs

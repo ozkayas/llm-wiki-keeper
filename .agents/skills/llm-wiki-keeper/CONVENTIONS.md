@@ -415,7 +415,7 @@ note. This layer removes the cap by making sure nothing ever reads everything.
 |---|---|---|
 | orchestrator, ingest mode | receipts, script output, `wiki/log.md` | `raw/`, wiki pages |
 | orchestrator, query mode | `wiki/index.md`, subdirectory indexes, and the wiki pages the disclosure ladder (`QUERY.md` Q.3) tells it to read | `raw/`, except where `QUERY.md` says so |
-| orchestrator, lint mode | script JSON from `lint.py`, reviewer receipts, and the report it writes | `raw/`, wiki pages |
+| orchestrator, lint mode | script JSON from `lint.py`, reviewer receipts, the report it writes, and one exception: the frontmatter `created` line of an earlier same-day report (grep only) | `raw/`, wiki pages |
 | `lint_reviewer` | its group of pages, the pages they cite, and for the C02 spot check one raw file per source page | other raw files, clones |
 | `source_writer` | **one** raw file | any other raw file, any wiki page |
 | `repo_writer` | one clone | other clones, source pages |

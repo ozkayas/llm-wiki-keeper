@@ -17,7 +17,7 @@ You write no page and no timestamp, so there is no clock rule.
 | Input | Meaning |
 |---|---|
 | `group` | Absolute paths of the pages to review (at most 6). |
-| `deterministic_findings` | The `lint.py` findings for those pages (may be empty). Do not repeat them; use them as hints. |
+| `deterministic_findings` | The `lint.py` findings for those pages (may be empty): inline JSON for a tiny group, otherwise the path of a scratch file holding them; read it. Do not repeat them; use them as hints. |
 | `wiki_dir` | `wiki-<slug>/`. |
 | `language` | From `config.yml`. Write `message` and `fix_hint` in it. Ids, keys and quotes stay as they are. |
 
