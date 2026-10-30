@@ -108,6 +108,7 @@ You receive no `now` input.
 
 ## Guardrails
 
+- **Relationship bullets are links, never claims.** A Relationships / Connections / Related bullet names the target and nothing else: `- [MCP](../concepts/mcp.md)`. If you want to say HOW two things relate, put it in one `> Synthesis:` line under the list, or write a sourced sentence with a footnote in the body.
 - **Synthesis is separate.** Any interpretation, comparison, evaluation or inference
   the cited code do not state outright goes on its own `> Synthesis:` line, uncited.
   Plain prose carries only sourced statements. A footnote supports only what its

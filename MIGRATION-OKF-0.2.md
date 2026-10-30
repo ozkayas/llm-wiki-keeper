@@ -272,7 +272,7 @@ a human table on stderr, exit 1 when any `error` exists. Flags: `--wiki-dir`, `-
 
 | id | name | severity | rule |
 |---|---|---|---|
-| L01 | uncited-prose | warn | On pages of type source, entity, concept, overview, note, repo, repo_note: any paragraph or list item that has no `[^id]` reference and is not a `> Synthesis:` line. Exempt: headings, tables, fenced code and mermaid blocks, footnote definitions, blockquote metadata lines, list items consisting only of links, frontmatter. question, open_question, index and log pages are not checked. |
+| L01 | uncited-prose | warn | On pages of type source, entity, concept, overview, note, repo, repo_note: any paragraph or list item that has no `[^id]` reference and is not a `> Synthesis:` line. Exempt: headings, tables, fenced code and mermaid blocks, footnote definitions, blockquote metadata lines, list items consisting only of links, frontmatter, and the first blockquote after the H1 on entity, concept, repo and repo_note pages when it is exactly one line (§17). question, open_question, index and log pages are not checked. |
 | L02 | empty-stub | error | A `.md` file (outside `raw/` and `.obsidian/`) with no non-whitespace content, or with no frontmatter and no body. Typical cause: a click on a hollow link. |
 | L03 | stray-outside-bundle | warn | Anything in `wiki-<slug>/` that is not `config.yml`, `raw/`, `wiki/` or `.obsidian/` (for example the `entities/` folder Obsidian creates). |
 | L04 | broken-link | error | A relative markdown link or a frontmatter reference wikilink whose target does not exist and is not promissory. Promissory = target under `entities/` or `concepts/` whose slug has fewer than 2 source mentions. Heading anchors are checked against heading text. |
@@ -313,3 +313,19 @@ for the spot check, the single raw file a source page cites. Checks:
 - `build_index_md.py` must treat `lint/` like any other subdirectory: generate `lint/index.md` (no frontmatter) and list it in the root index as `* [Lint](lint/index.md) - N pages`, reading each report's `title` and `description`. `lint_report` is a known `type`. (Script not edited here.)
 - Mode detection: lint iff the user says lint, health check, audit, "check the wiki" or similar. Ambiguity resolves to query, as before.
 - `config.yml` keys used: `tags`, `stale_after_days` (L08 also reports a page whose `generated.at` is older than `stale_after_days` and whose source is a web article or a repo, as info).
+
+## 17. Decisions after the first lint run
+
+The first lint run on a real generated wiki gave 60 L01 warnings. Two shapes dominated, with different verdicts.
+
+1. **Relationship bullets are links, never claims (template fix).** Bullets such as
+   `- **MCP**: the delivery mechanism through which memory tools reach the agent. [MCP](../concepts/mcp.md)` carry an
+   uncited claim, so lint was right and the template was wrong. A Relationships / Connections / Related bullet now names
+   the target and nothing else: `- [MCP](../concepts/mcp.md)`. To say how two things relate, use one `> Synthesis:` line
+   under the list, or a sourced sentence with a footnote in the body. Changed: every template and worked example in
+   `PAGES.md` (the bold `**Entities**:` and `**Concepts**:` labels are gone too), `CONVENTIONS.md`, and the writer prompts
+   `page_writer.md`, `source_writer.md`, `repo_writer.md`, `overview_writer.md`.
+2. **Definition blockquote is exempt (lint fix).** The one-line `> <definition>` after the H1 on entity, concept, repo and
+   repo_note pages mirrors the frontmatter `description`, and the cited Definition section follows. L01 skips the first
+   blockquote after the H1 on those page types, only when it is exactly one line. A second uncited blockquote, or a
+   multi-line first one, still fails. Tests added in `tests/test_lint.py`.

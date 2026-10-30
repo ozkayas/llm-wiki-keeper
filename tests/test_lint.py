@@ -261,6 +261,36 @@ Cited.[^alpha]
     assert of(data, "L01") == [], of(data, "L01")
 
 
+def test_l01_definition_blockquote_after_h1_is_exempt(wiki: Path):
+    edit(wiki, "wiki/concepts/mcp.md", "# MCP\n\n", "# MCP\n\n> An open protocol for tool access.\n\n")
+    _, data = lint(wiki)
+    assert of(data, "L01") == [], of(data, "L01")
+
+
+def test_l01_second_blockquote_still_fails(wiki: Path):
+    edit(wiki, "wiki/concepts/mcp.md", "\n[^alpha]:", "\n> An open protocol for tool access.\n\n> It is the best protocol.\n\n[^alpha]:")
+    _, data = lint(wiki)
+    found = of(data, "L01")
+    assert len(found) == 1 and "best protocol" in found[0]["message"]
+
+
+def test_l01_two_line_first_blockquote_fails(wiki: Path):
+    edit(wiki, "wiki/concepts/mcp.md", "\n[^alpha]:", "\n> Line one.\n> Line two.\n\n[^alpha]:")
+    _, data = lint(wiki)
+    assert len(of(data, "L01")) == 1
+
+
+def test_l01_relationship_bullet_with_claim_fails_link_only_passes(wiki: Path):
+    edit(wiki, "wiki/concepts/mcp.md", "\n[^alpha]:",
+         "\n## Relationships\n\n- **MCP**: the delivery mechanism through which memory tools reach the agent. [MCP](../concepts/mcp.md)\n\n[^alpha]:")
+    _, data = lint(wiki)
+    assert len(of(data, "L01")) == 1
+    edit(wiki, "wiki/concepts/mcp.md", "- **MCP**: the delivery mechanism through which memory tools reach the agent. [MCP](../concepts/mcp.md)",
+         "- [MCP](../concepts/mcp.md)\n- [Claude Code](../entities/claude-code.md)")
+    _, data = lint(wiki)
+    assert of(data, "L01") == [], of(data, "L01")
+
+
 def test_l01_skips_question_and_unchecked_types(wiki: Path):
     write(wiki, "wiki/questions/q2.md", page("question", body="No footnote here."))
     write(wiki, "wiki/notes/log-link.md", page("open_question", body="Nothing cited."))

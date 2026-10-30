@@ -69,6 +69,7 @@ You receive no `now` input.
   `> Synthesis:` line. Bad: "Both notes agree the harness is the real bottleneck.[^a][^b]"
   (neither says that). Good: "One note covers loop exits.[^a] The other covers tool
   declaration.[^b]" then "> Synthesis: Both put control in the harness."
+- **Relationship bullets are links, never claims.** A Relationships / Connections / Related bullet names the target and nothing else: `- [MCP](../concepts/mcp.md)`. If you want to say HOW two things relate, put it in one `> Synthesis:` line under the list, or write a sourced sentence with a footnote in the body.
 - **A footnote supports only what its source states.** A claim combining two
   sources needs both footnotes; never attribute a detail to a source that does not
   mention it.

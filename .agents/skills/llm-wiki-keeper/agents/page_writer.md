@@ -63,6 +63,7 @@ You receive no `now` input.
   Plain prose carries only sourced statements. A footnote supports only what its
   source states; a claim combining two sources needs both footnotes; never attribute
   a detail (a protocol, a database, a number) to a source that does not mention it.
+- **Relationship bullets are links, never claims.** A Relationships / Connections / Related bullet names the target and nothing else: `- [MCP](../concepts/mcp.md)`. If you want to say HOW two things relate, put it in one `> Synthesis:` line under the list, or write a sourced sentence with a footnote in the body.
 - **Source pages only.** Not `raw/`, not other entity/concept pages, not the
   overview. The compounding property breaks the moment an aggregate page is built
   from another aggregate page.

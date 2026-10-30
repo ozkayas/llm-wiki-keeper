@@ -21,6 +21,8 @@ relative markdown links, one-sentence `description`, ISO-8601 instants) live in
   Body links stay standard markdown, relative to the page (`../concepts/mcp.md`); no wikilinks in bodies.
 - Claims carry a footnote `[^id]` whose id is a `sources[].id`; `> Synthesis:` lines carry none.
 - **Synthesis.** Any interpretation, comparison, evaluation or inference that the cited material does not state outright goes on its own line starting `> Synthesis:`, on every page type including overview and notes. Plain prose carries only sourced statements. A footnote supports only what its source states; a claim that combines two sources needs both footnotes; never attribute a detail (a protocol, a database, a number) to a source that does not mention it.
+- **Relationship bullets.** A Relationships / Connections / Related bullet is a link and nothing else: `- [MCP](../concepts/mcp.md)`. A label such as `- [MCP](../concepts/mcp.md): protocol it speaks` is not allowed, because it asserts something the sources must support. A relationship bullet names the target and nothing else. If you want to say HOW two things relate, put it in one `> Synthesis:` line under the list, or write a sourced sentence with a footnote in the body.
+- **Definition blockquote.** On entity, concept, repo and repo_note pages the single `> <definition>` line right after the H1 mirrors the frontmatter `description`; it needs no footnote because the cited Definition section follows. It must be exactly one line, and it is the only uncited blockquote besides `> Synthesis:` and metadata lines.
 - **Anchors point at the heading text, percent-encoded, as Obsidian expects** (not a GitHub slug): `../../raw/my-note.md#6.%20Building%20the%20Server`. Spaces become `%20`, other characters stay as in the heading, and `)` and `%` are encoded too (`%29`, `%25`).
 - Receipts keep their field names. They never held wikilinks or timestamps, so none changed.
   `page` is a path relative to `wiki-<slug>/`.
@@ -80,8 +82,8 @@ a footnote.[^raw]>
 
 ## Connections
 
-- **Entities**: [<Name>](../entities/<slug>.md), ...
-- **Concepts**: [<Name>](../concepts/<slug>.md), ...
+- [<Name>](../entities/<slug>.md)
+- [<Name>](../concepts/<slug>.md)
 
 > Synthesis: <one line — how this note sits against the rest of the wiki>
 
@@ -148,8 +150,9 @@ shows three runs where a missing budget turned a ten-minute task into an hour.[^
 
 ## Connections
 
-- **Entities**: [Claude Code](../entities/claude-code.md)
-- **Concepts**: [Agent loop](../concepts/agent-loop.md), [MCP](../concepts/mcp.md)
+- [Claude Code](../entities/claude-code.md)
+- [Agent loop](../concepts/agent-loop.md)
+- [MCP](../concepts/mcp.md)
 
 > Synthesis: Complements the MCP note by showing where tool errors surface in the loop.
 
@@ -218,7 +221,7 @@ each one — do not average them into mush.>
 
 ## Relationships
 
-- **<other page>**: <one line on how they relate>. [<Name>](../concepts/<slug>.md)
+- [<Name>](../concepts/<slug>.md)
 
 > Synthesis: <one line — how this fits the wiki as a whole>
 
@@ -273,9 +276,9 @@ connects to servers and exposes their tools.[^agent-loops][^tool-servers]
 
 ## Relationships
 
-- **Agent loop**: the loop is where MCP results are consumed. [Agent loop](../concepts/agent-loop.md)
+- [Agent loop](../concepts/agent-loop.md)
 
-> Synthesis: MCP matters here as the reason tool errors are the model's problem to read.
+> Synthesis: The loop is where MCP results are consumed, which is why tool errors are the model's problem to read.
 
 [^agent-loops]: [Agent loops in practice](../sources/agent-loops.md)
 [^tool-servers]: [Writing tool servers](../sources/tool-servers.md)
@@ -469,8 +472,8 @@ link — a link to a directory does not resolve in Obsidian.)
 
 ## Connections
 
-- **Entities**: [<Name>](../../entities/<slug>.md), ...
-- **Concepts**: [<Name>](../../concepts/<slug>.md), ...
+- [<Name>](../../entities/<slug>.md)
+- [<Name>](../../concepts/<slug>.md)
 
 > Synthesis: <one line — what this codebase demonstrates that the notes only assert>
 ```
@@ -525,7 +528,7 @@ One module owns the loop; tools are plain functions registered in a dict.
 
 ## Connections
 
-- **Concepts**: [Agent loop](../../concepts/agent-loop.md)
+- [Agent loop](../../concepts/agent-loop.md)
 
 > Synthesis: The code enforces the step budget the notes only recommend.
 
@@ -723,8 +726,8 @@ concepts: []
 
 ## Connections
 
-- **Entities**: ...
-- **Concepts**: ...
+- [<Name>](../../entities/<slug>.md)
+- [<Name>](../../concepts/<slug>.md)
 
 > Synthesis: <one line>
 
@@ -774,7 +777,7 @@ concepts:
 
 ## Connections
 
-- **Concepts**: [Agent loop](../../concepts/agent-loop.md)
+- [Agent loop](../../concepts/agent-loop.md)
 
 > Synthesis: A hard budget, no semantic stop condition.
 

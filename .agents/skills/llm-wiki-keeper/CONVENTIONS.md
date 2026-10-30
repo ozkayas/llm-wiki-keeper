@@ -230,6 +230,14 @@ key: a footnote label must equal a `sources[].id`.
   code claims keep their commit-pinned permalink style.
 - LLM judgment is never laundered as a sourced claim. It goes on its own line,
   prefixed `> Synthesis:`, and carries no footnote, on every page type.
+- A relationship bullet (Relationships, Connections, Related) names the target and
+  nothing else: `- [MCP](../concepts/mcp.md)`. If you want to say HOW two things
+  relate, put it in one `> Synthesis:` line under the list, or write a sourced
+  sentence with a footnote in the body. A label that asserts something is an
+  uncited claim.
+- The one-line `> <definition>` blockquote right after the H1 on entity, concept,
+  repo and repo_note pages mirrors `description` and needs no footnote; a second
+  uncited blockquote does.
 - A footnote supports only what its source states. A claim that combines two
   sources needs both footnotes. Never attribute a detail (a protocol, a database,
   a number) to a source that does not mention it.

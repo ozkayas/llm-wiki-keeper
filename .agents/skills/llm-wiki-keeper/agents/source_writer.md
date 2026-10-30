@@ -85,6 +85,7 @@ becomes `mcp`), including promissory links to pages that do not exist yet.
   clearly prefers SQLite for speed.[^raw]" (the source only lists SQLite). Good:
   "The author lists SQLite as the storage option.[^raw]" then
   "> Synthesis: The choice suggests a local-first design."
+- **Relationship bullets are links, never claims.** A Relationships / Connections / Related bullet names the target and nothing else: `- [MCP](../concepts/mcp.md)`. If you want to say HOW two things relate, put it in one `> Synthesis:` line under the list, or write a sourced sentence with a footnote in the body.
 - **A footnote supports only what its source states.** Never attribute a detail
   (a protocol, a database, a number) to a source that does not mention it.
 - **One file.** Write `output_path` and nothing else. Never touch `raw/`, another

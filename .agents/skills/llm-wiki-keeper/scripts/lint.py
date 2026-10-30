@@ -38,6 +38,8 @@ import yaml
 
 RESERVED = {"index.md", "log.md"}
 CHECKED_TYPES = {"source", "entity", "concept", "overview", "note", "repo", "repo_note"}
+# Pages whose first one-line blockquote after the H1 mirrors the frontmatter description (exempt from L01).
+DEFINITION_TYPES = {"entity", "concept", "repo", "repo_note"}
 KINDS = ("entities", "concepts")
 SOURCE_LIKE_GLOBS = ["sources/*.md", "repos/*/*.md"]
 REFERENCE_KEYS = ("entities", "concepts", "related", "answer_doc", "sources_cited", "spawned_by_question", "repo")
@@ -316,6 +318,7 @@ def check_l01(ctx: Ctx) -> None:
         units: list[dict[str, Any]] = []
         cur: dict[str, Any] | None = None
         in_fence = in_foot = False
+        seen_h1 = def_used = False
 
         def flush() -> None:
             nonlocal cur
@@ -344,6 +347,8 @@ def check_l01(ctx: Ctx) -> None:
                 continue
             if HEADING_RE.match(line) or HR_RE.match(line) or stripped.startswith(("|", "<")):
                 flush()
+                if re.match(r"#\s", line):
+                    seen_h1 = True
                 continue
             m = LIST_RE.match(line)
             if m:
@@ -354,7 +359,12 @@ def check_l01(ctx: Ctx) -> None:
                     cur["text"] += " " + stripped.lstrip(">").strip()
                 else:
                     flush()
-                    cur = {"line": n, "text": stripped, "kind": "quote"}
+                    first = seen_h1 and not def_used
+                    if seen_h1:
+                        def_used = True
+                    cur = {"line": n, "text": stripped, "kind": "quote", "lines": 1, "defn": first}
+                if cur and cur["kind"] == "quote" and cur["line"] != n:
+                    cur["lines"] += 1
             elif cur:
                 cur["text"] += " " + stripped
             else:
@@ -367,6 +377,8 @@ def check_l01(ctx: Ctx) -> None:
                 continue
             if u["kind"] == "quote" and META_BQ_RE.match(text):
                 continue
+            if u["kind"] == "quote" and u.get("defn") and u["lines"] == 1 and page.type in DEFINITION_TYPES:
+                continue  # one-line definition blockquote right after the H1 (mirrors `description`)
             residue = re.sub(r"!?\[[^\]]*\]\([^)]*\)|\[\[[^\]]*\]\]|https?://\S+", "", text)
             if u["kind"] == "list" and not re.search(r"[^\W_]", residue):
                 continue  # links-only item
