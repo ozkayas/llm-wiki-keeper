@@ -407,6 +407,8 @@ note. This layer removes the cap by making sure nothing ever reads everything.
 |---|---|---|
 | orchestrator, ingest mode | receipts, script output, `wiki/log.md` | `raw/`, wiki pages |
 | orchestrator, query mode | `wiki/index.md`, subdirectory indexes, and the wiki pages the disclosure ladder (`QUERY.md` Q.3) tells it to read | `raw/`, except where `QUERY.md` says so |
+| orchestrator, lint mode | script JSON from `lint.py`, reviewer receipts, and the report it writes | `raw/`, wiki pages |
+| `lint_reviewer` | its group of pages, the pages they cite, and for the C02 spot check one raw file per source page | other raw files, clones |
 | `source_writer` | **one** raw file | any other raw file, any wiki page |
 | `repo_writer` | one clone | other clones, source pages |
 | `page_writer` | the source-like pages for its slug | `raw/`, other aggregate pages |
@@ -430,6 +432,7 @@ story:
 |---|---|---|---|
 | **ingest-owned** | `raw/`, `sources/`, `entities/`, `concepts/`, `overview.md`, `repos/*/ARCHITECTURE.md` | the ingest path | a source is added or a repo refreshed |
 | **interaction-owned** | `questions/`, `notes/`, `open-questions.md` | the query path | a question is asked or answered |
+| **interaction-owned** | `lint/` | the lint path, one report per day | a lint run; the same day overwrites |
 | **repo notes** | `repos/<repo>/<question-slug>.md` | `repo_writer` in `question` mode, from the query path | never — they are appended, then flow through the ingest tail |
 
 The rule that follows: **query mode never edits an ingest-owned page.** Reading a
@@ -462,7 +465,10 @@ wiki-<slug>/wiki/
 ├── notes/                              # type: note — the actual synthesized answers
 │   ├── index.md                        # GENERATED
 │   └── <slug>.md
-└── open-questions.md                   # type: open_question — append-only, dated
+├── lint/                               # type: lint_report — one report per day
+│   ├── index.md                        # GENERATED
+│   └── YYYY-MM-DD.md
+└── open-questions.md                   # type: open_question — append-only, dated (lint appends C04 findings too)
 ```
 
 Three rules keep this layer from turning into a chat log:
@@ -478,6 +484,8 @@ Three rules keep this layer from turning into a chat log:
 Query-path pages (`questions/`, `notes/`, `open-questions.md`) carry
 `generated.by: llm-wiki-keeper/orchestrator`; a repo note carries
 `llm-wiki-keeper/repo_writer`. Each query appends one `**Query**` entry to the log.
+A lint report carries `llm-wiki-keeper/orchestrator` and each run appends one `**Lint**` entry.
+Lint never edits an ingest-owned or interaction-owned page except its own report and the `open-questions.md` append.
 
 ---
 

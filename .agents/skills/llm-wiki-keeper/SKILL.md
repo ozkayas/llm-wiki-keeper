@@ -1,6 +1,6 @@
 ---
 name: llm-wiki-keeper
-description: "Build and query an LLM-maintained wiki (OKF v0.2 bundle) that learns from being used — questions, notes and repo answers land back in the graph (modes: ingest, query; a lint mode is planned, not built yet)."
+description: "Build and query an LLM-maintained wiki (OKF v0.2 bundle) that learns from being used — questions, notes and repo answers land back in the graph (modes: ingest, query, lint)."
 ---
 
 # LLM Wiki — layer 03, interactive
@@ -16,10 +16,9 @@ The discipline that makes this safe is **regime separation** (`CONVENTIONS.md`
 §13): reading a source can never change what the wiki says that source means.
 
 The wiki is an Open Knowledge Format **v0.2** bundle (`wiki/`), with user
-preferences in `wiki-<slug>/config.yml`. A lint mode is planned; it does not exist
-yet, so do not offer it.
+preferences in `wiki-<slug>/config.yml`. A lint mode checks its health (`LINT.md`).
 
-Four files carry the contract, and you follow them exactly (they live in
+Five files carry the contract, and you follow them exactly (they live in
 `.agents/skills/llm-wiki-keeper/`; every agent prompt you write must name them by
 the exact path, for example `.agents/skills/llm-wiki-keeper/PAGES.md`. If that path
 does not exist, look in the directory of this skill file):
@@ -28,6 +27,7 @@ does not exist, look in the directory of this skill file):
 - `PAGES.md` — the template and receipt for every page type.
 - `SOURCES.md` — the adapter contract, the routing table, and how to add an origin.
 - `QUERY.md` — the whole query path, Q.1–Q.8.
+- `LINT.md` — the whole lint path, L.1–L.8.
 
 Read the first two before your first write in a session, and `QUERY.md` before
 your first answer.
@@ -67,7 +67,8 @@ uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py \
 ## Step 1 — Detect mode
 
 **Ingest** iff the user used an explicit verb (*ingest, add, build, index*) **or**
-dropped file/directory paths. Everything else is **query**.
+dropped file/directory paths. **Lint** iff the user said *lint*, *health check*,
+*audit* or *check the wiki*. Everything else is **query**.
 
 When it is ambiguous, choose **query**. Redirecting a query is cheap; a
 mis-triggered ingest writes files the user did not ask for.
@@ -282,6 +283,15 @@ The one-line summary: **always write the slim question page; write a note only w
 the answer cited ≥2 wiki pages or the user asked you to; never edit an
 ingest-owned page.**
 
+# Lint path — see `LINT.md`
+
+When Step 1 selects lint mode, **read `LINT.md` now and follow it**. It covers L.1 locate,
+L.2 the deterministic script, L.3 reviewer agents per group of pages, L.4 merge, L.5 the
+report page, L.6 open questions, L.7 log and index, and L.8 present.
+
+The one-line summary: **lint writes only `wiki/lint/YYYY-MM-DD.md` and appends to
+`open-questions.md`; deleting empty stubs and rebuilding indexes happen only after a yes.**
+
 ---
 
 ## Harness notes
@@ -312,11 +322,12 @@ Read the file, pass its body as the prompt, collect one JSON receipt.
 | `agents/repo_writer.md` | one clone under `raw/repos/` | one page under `wiki/repos/<repo>/` |
 | `agents/page_writer.md` | the source-like pages for one slug | one `wiki/entities/` or `wiki/concepts/` page |
 | `agents/overview_writer.md` | frontmatter, plus ≤5 full pages | `wiki/overview.md` |
+| `agents/lint_reviewer.md` | a group of ≤6 pages, the pages they cite, and one raw file per source page for the spot check | nothing; returns findings as JSON |
 | `agents/repo_writer.md` (`mode: question`) | one clone, plus the repo's `ARCHITECTURE.md` | one `wiki/repos/<repo>/<question-slug>.md` — **wired up in this layer** (`QUERY.md` Q.6) |
 
 ## Script reference
 
-All six scripts are PEP 723 single files — `uv` installs their dependencies on
+All seven scripts are PEP 723 single files — `uv` installs their dependencies on
 the first run. You run them; the user never does. Paths below are relative to the layer directory.
 
 | Script | Call | Does |
@@ -324,6 +335,7 @@ the first run. You run them; the user never does. Paths below are relative to th
 | `scripts/count_mentions.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/count_mentions.py --wiki-dir wiki-<slug>` | Frontmatter walk over source-like pages → `{slug: [pages]}` + the `qualifying` list at ≥2. JSON on stdout, table on stderr. |
 | `scripts/build_index_md.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/build_index_md.py --wiki-dir wiki-<slug>` | Regenerates `wiki/index.md` (frontmatter `okf_version: "0.2"`) and each `wiki/<subdir>/index.md` (no frontmatter) from page frontmatter, then checks OKF conformance. Deterministic: same input, same bytes. |
 | `scripts/append_log.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/append_log.py --wiki-dir wiki-<slug> --op <Creation\|Ingest\|Query\|Lint\|Update> --text "..." [--text "..."]` | Inserts one entry block at the top of its date group in `wiki/log.md` (newest first), creating the file or group when missing. Repeat `--text` for several bullets in one block. Optional `--date YYYY-MM-DD`. |
+| `scripts/lint.py` | `uv run --script .agents/skills/llm-wiki-keeper/scripts/lint.py --wiki-dir wiki-<slug> --json-only 2>/dev/null` | Read-only deterministic checks L01–L15. JSON `{findings, summary, config, checked_pages}` on stdout, table on stderr, exit 1 when an error exists. |
 | `scripts/clone_repo.py` | `--repo <url> --wiki-dir wiki-<slug>` | Shallow-clones into `raw/repos/.github-<owner>-<repo>/`, or refreshes it. JSON receipt with `commit_sha` and `action`. |
 | `scripts/fetch_article.py` | `--url <url> --wiki-dir wiki-<slug>` | `curl` → body isolation → markdown at `raw/article-<slug>.md`. Warns when the body looks like a paywall. |
 | `scripts/fetch_youtube.py` | `--url <url> --wiki-dir wiki-<slug>` | Skeleton. Raises `NotImplementedError` — the workshop exercise in `SOURCES.md`. |

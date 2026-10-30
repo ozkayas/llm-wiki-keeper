@@ -826,3 +826,89 @@ generated: { by: llm-wiki-keeper/orchestrator, at: 2026-10-28T11:05:00Z }
 - Does the step budget differ between harnesses? — from [Why do agent loops need a step budget?](questions/2026-10-28-why-agent-loops-need-a-step-budget.md)
 - Is there a note on context-window limits? — flagged by the user
 ```
+
+<!-- added in lint -->
+## `lint_report` — `wiki/lint/YYYY-MM-DD.md`
+
+Written by the orchestrator (`LINT.md` L.5). A second run on the same day overwrites it.
+It **reports and cites nothing**: no `sources` list, no footnotes, no `> Synthesis:`
+lines. Every finding links to the page it is about with a standard relative markdown
+link (the report sits in `wiki/lint/`, so links start with `../`).
+
+```markdown
+---
+type: lint_report
+title: Lint report <YYYY-MM-DD>
+description: <ONE sentence: counts by severity>
+created: <ISO-8601 UTC>
+generated: { by: llm-wiki-keeper/orchestrator, at: <ISO-8601 UTC> }
+---
+
+# Lint report <YYYY-MM-DD>
+
+| Severity | Count |
+|---|---|
+| error | <n> |
+| warn | <n> |
+| info | <n> |
+
+## Errors
+- **<id> <name>**: [<page>](../<path>.md) line <n>. <message> Fix: <fix_hint>
+
+## Warnings
+- ...
+
+## Info
+- ...
+
+## Trust tiers
+<One paragraph from L12: counts per tier and per status.>
+
+## Suggested next ingests
+- <slug>: <why a second source would help (C04)>
+```
+
+Omit a severity section when it is empty. **Budget:** no cap, but one line per finding.
+
+**Worked example**
+
+```markdown
+---
+type: lint_report
+title: Lint report 2026-10-30
+description: 1 error, 2 warnings and 2 info findings across 7 pages.
+created: 2026-10-30T14:20:00Z
+generated: { by: llm-wiki-keeper/orchestrator, at: 2026-10-30T14:20:00Z }
+---
+
+# Lint report 2026-10-30
+
+| Severity | Count |
+|---|---|
+| error | 1 |
+| warn | 2 |
+| info | 2 |
+
+## Errors
+
+- **L02 empty-stub**: [entities/claude-code](../entities/claude-code.md) has no content. Fix: delete it, or ingest a second source that mentions Claude Code.
+
+## Warnings
+
+- **C05 interpretation-in-prose**: [agent-loop](../concepts/agent-loop.md) line 14. "Claude Code is a better fit than Cursor for long refactors." is a comparison the source does not state. Fix: move it to a `> Synthesis:` line.
+- **L07 orphan**: [notes/old-draft](../notes/old-draft.md) has no inbound link. Fix: link it from a question page or leave it.
+
+## Info
+
+- **C03 missing-cross-reference**: [agent-loops](../sources/agent-loops.md) line 9 names MCP without linking [mcp](../concepts/mcp.md). Fix: add the link on the next ingest.
+- **L14 config-missing**: no `config.yml`; defaults were used.
+
+## Trust tiers
+
+All 7 pages are unverified (machine-written, never human-reviewed); none is machine-confirmed or human-reviewed. Status: 7 stable, 0 draft, 0 deprecated.
+
+## Suggested next ingests
+
+- tool-use: waiting at 1 mention, one more source would earn it a page.
+- step-budget: the open question "Does the step budget differ between harnesses?" may now be answered by [agent-loop](../concepts/agent-loop.md).
+```

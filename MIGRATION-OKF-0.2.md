@@ -310,5 +310,6 @@ for the spot check, the single raw file a source page cites. Checks:
 - Log: one `**Lint**` bullet via `append_log.py`: counts by severity and a link to the report.
 - Findings C04 may be appended to `open-questions.md` as dated bullets (append-only, as in query mode); nothing else is written outside `lint/`.
 - Fixes are a separate, user-confirmed step: the orchestrator may (a) delete empty stubs (L02, L03 folders that are empty), after listing them and getting a yes, (b) re-run `build_index_md.py` (L10). Content findings are never auto-fixed; they go to the next ingest or to a human edit.
+- `build_index_md.py` must treat `lint/` like any other subdirectory: generate `lint/index.md` (no frontmatter) and list it in the root index as `* [Lint](lint/index.md) - N pages`, reading each report's `title` and `description`. `lint_report` is a known `type`. (Script not edited here.)
 - Mode detection: lint iff the user says lint, health check, audit, "check the wiki" or similar. Ambiguity resolves to query, as before.
 - `config.yml` keys used: `tags`, `stale_after_days` (L08 also reports a page whose `generated.at` is older than `stale_after_days` and whose source is a web article or a repo, as info).
