@@ -42,7 +42,7 @@ You receive no `now` input.
    `generated: { by: llm-wiki-keeper/page_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, `aliases`, a
    `sources` list with one entry per source page you read (`id` = its slug,
    `resource` = relative path such as `../sources/<slug>.md`; a repo page uses the
-   id `github-<owner>-<repo>`), `related` as bundle-relative paths, and
+   id `github-<owner>-<repo>`), `related` as quoted wikilinks (`"[[concepts/<slug>]]"`), and
    `source_count`. Every claim carries a footnote `[^<id>]` keyed to a
    `sources[].id`, defined at the end of the page. Where two sources say the same
    thing, cite both: that is the wiki's only measure of corroboration. If two ids

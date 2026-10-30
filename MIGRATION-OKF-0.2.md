@@ -44,10 +44,10 @@ description: One sentence.         # required by this skill; the only thing the 
 created: 2026-10-28T09:00:00Z      # producer-defined key, preserved across rewrites (OKF allows extra keys)
 generated: { by: llm-wiki-keeper/source_writer, at: 2026-10-28T09:00:00Z }
 sources: [...]                     # see §4
-entities:                          # unchanged meaning (the >=2 threshold); values are now paths, see §5
-  - /entities/claude-code.md
+entities:                          # unchanged meaning (the >=2 threshold); values are quoted wikilinks, see §14
+  - "[[entities/claude-code]]"
 concepts:
-  - /concepts/mcp.md
+  - "[[concepts/mcp]]"
 status: stable                     # optional: draft | stable | deprecated. Absent means stable.
 stale_after: 2027-01-01T00:00:00Z  # optional, absolute instant. Writers omit it unless the source is time-sensitive.
 tags: [a, b]                       # optional. Writers never invent tags (config tags: optional).
@@ -110,13 +110,11 @@ Repo pages: `{ id: repo, resource: https://github.com/<owner>/<repo>/tree/<sha>,
   `[MCP](../concepts/mcp.md)`, `[note](../../raw/my-note.md#Heading%20Text)`.
   Why relative and not OKF's recommended bundle-absolute `/concepts/mcp.md`: Obsidian resolves `/` against the vault
   root, and the vault is often the project root, not `wiki/`. A relative link works from either.
-- **Frontmatter lists** `entities:` / `concepts:` hold the bundle-relative path (starts with `/`, ends in `.md`).
-  They are data for the threshold script, not links a reader follows; the path is the identity and `count_mentions.py`
-  derives the slug from it.
+- **Frontmatter reference keys** (`entities`, `concepts`, ...) hold quoted wikilinks, not paths. Superseded by §14.
 - **Promissory links** are allowed: a link to `../concepts/<slug>.md` before the page exists. OKF §6.1 tolerates
   broken links. Slug discipline is unchanged (lowercase kebab-case ASCII, max 60 chars).
 - **External links:** `[title](https://...)`, unchanged.
-- No `[[wikilinks]]` anywhere in the skill's output.
+- No `[[wikilinks]]` in page bodies. The only wikilinks are the frontmatter reference keys of §14.
 - Link text is a human title, not the path.
 
 ## 6. Index and log
@@ -223,3 +221,23 @@ These supersede any earlier text, including §12 item 5(h) on `total_pages`.
 6. **`mentions_json`** may be inline or a path to a file holding the script's JSON; the agent reads the file when given a path. The orchestrator may save the script output to a scratch file (`SKILL.md` 1.5).
 7. **"The wiki does not cover this"** (`QUERY.md` Q.5, question template): `sources_cited` lists the wiki pages read to establish that, `answer_doc` stays null, and the open question is recorded.
 8. **No-ask-user fallback** is the first bullet under "Creating a wiki" in `SKILL.md` Step 0, with the exact sentence: "No ask-user capability (for example you are a subagent): write config.yml with the defaults and say so in your report." It is repeated in the Harness notes table.
+
+## 14. Frontmatter reference keys are wikilinks
+
+Decision (user, 2026-10-30). Supersedes §5 "Frontmatter lists", §11 item 2 and the `/x/y.md` path form everywhere.
+
+**Keys.** These page-reference keys hold quoted Obsidian wikilinks, as one string or a list of strings:
+`entities`, `concepts`, `related`, `answer_doc`, `sources_cited`, `spawned_by_question`, `repo`.
+Reading `PAGES.md` found no others: `original_path`, `source_url`, `repo_url`, `clone_path` are not page references,
+and `sources[].resource` is OKF-defined (a relative path or URL) and does not change.
+
+**Form.** `"[[concepts/mcp]]"`: the path relative to the bundle root (`wiki/`), no leading slash, no `.md`, no `wiki/` prefix.
+Obsidian resolves wikilinks by path suffix, so this works whether the vault is the project root, `wiki-<slug>/` or `wiki/`.
+Always quote: an unquoted `[[x]]` parses as a nested YAML list. `count_mentions.py` takes the last path segment as the slug.
+Legacy `/x/y.md` and `[[wiki/x/y]]` are still counted; `build_index_md.py` warns about the legacy path form as a migration hint.
+
+**Reason.** Obsidian's Properties panel makes only `[[wikilinks]]` clickable; plain paths and markdown links are not.
+
+**Cost.** These keys are the one place the skill emits wikilinks. The body rule is unchanged: bodies use standard relative
+markdown links and `[[wikilinks]]` stay forbidden there. This is a producer-defined extension; OKF §4.1 allows extra keys,
+so the bundle stays conformant. Receipts still return slugs.

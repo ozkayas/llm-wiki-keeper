@@ -95,7 +95,7 @@ say so in your reply, add it to `open-questions.md` (Q.7), and change nothing el
    query mode — suggest re-ingesting the repo.
    Then spawn `agents/repo_writer.md` with `mode: question`, passing `clone_path`,
    `commit_sha`, `branch`, the verbatim `question`, the `architecture_path`, the
-   `question_page` path, and `language` and `tags` from `config.yml`. It writes
+   `question_page` wikilink, and `language` and `tags` from `config.yml`. It writes
    `wiki/repos/<repo>/<question-slug>.md` (`PAGES.md § repo_note`) and returns a
    receipt. If its receipt says `"answered_from_architecture": true`, it wrote
    nothing — fall back to Q.5.
@@ -109,7 +109,7 @@ say so in your reply, add it to `open-questions.md` (Q.7), and change nothing el
    → spawn one `page_writer` per qualifying slug the new note touched →
    `overview_writer` → `build_index_md.py`.
 4. Then write the slim question page with `answer_doc` pointing at the repo note
-   (bundle-relative path, `/repos/<repo>/<question-slug>.md`).
+   (quoted wikilink, `"[[repos/<repo>/<question-slug>]]"`).
 
 This is the only way query mode reaches an ingest-owned page: **through the tail,
 never by hand.**

@@ -10,9 +10,9 @@ distinct source-like pages list it** in their `entities:` / `concepts:`
 frontmatter. Source-like pages are the pages written directly from an ingested
 artifact — `wiki/sources/*.md` and, since layer 02, `wiki/repos/<repo>/*.md`.
 
-The references (bundle-relative paths like `/entities/claude-code.md`; legacy
-`[[wiki/entities/x]]` still accepted) are read from frontmatter, not from the body, so the count is a
-cheap, deterministic frontmatter walk instead of a full-text scan.
+The references (quoted wikilinks like `"[[entities/claude-code]]"`; the slug is the last path
+segment; legacy `/entities/x.md` and `[[wiki/entities/x]]` still accepted) are read from frontmatter,
+not from the body, so the count is a cheap, deterministic frontmatter walk instead of a full-text scan.
 
 Usage:
   uv run --script count_mentions.py --wiki-dir ../../../../wiki-<slug>
@@ -60,14 +60,24 @@ def parse_frontmatter(path: Path) -> dict[str, Any]:
 def slug_of(reference: Any) -> str:
     """Slug = filename stem of the referenced page.
 
-    v0.2 form: a bundle-relative path, "/concepts/mcp.md" -> "mcp".
-    Legacy v0.1 form (still accepted so old wikis keep counting): "[[wiki/concepts/mcp]]"
-    or "[[wiki/concepts/mcp|label]]" -> "mcp".
+    Current form: a quoted wikilink relative to the bundle root, "[[concepts/mcp]]" -> "mcp".
+    Still accepted so older wikis keep counting: the path form "/concepts/mcp.md" and the
+    v0.1 "[[wiki/concepts/mcp]]" or "[[wiki/concepts/mcp|label]]".
     """
     text = str(reference).strip().strip("[]").split("|")[0].strip()
     if text.endswith(".md"):
         text = text[:-3]
     return text.rsplit("/", 1)[-1]
+
+
+def references(value: Any) -> list[Any]:
+    """Flatten a reference key's value: a string, a list of strings, or the nested lists
+    YAML makes of an unquoted `[[x]]`."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [leaf for item in value for leaf in references(item)]
+    return [value]
 
 
 def source_like_pages(bundle: Path) -> list[Path]:
@@ -84,7 +94,7 @@ def collect(bundle: Path) -> dict[str, dict[str, list[str]]]:
         fm = parse_frontmatter(page)
         rel = f"wiki/{page.relative_to(bundle).as_posix()}"
         for key, _ in KINDS:
-            for reference in fm.get(key) or []:
+            for reference in references(fm.get(key)):
                 slug = slug_of(reference)
                 if slug:
                     mentions[key].setdefault(slug, set()).add(rel)

@@ -9,10 +9,10 @@ sources:
     resource: https://github.com/example/demo-repo/tree/0123abc
     title: example/demo-repo
 entities:
-  - /entities/solo-tool.md
-  - /entities/repo-only.md
+  - "[[entities/solo-tool]]"
+  - "[[entities/repo-only]]"
 concepts:
-  - /concepts/mcp.md
+  - "[[concepts/mcp]]"
 ---
 
 # demo-repo overview

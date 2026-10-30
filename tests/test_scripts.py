@@ -114,6 +114,42 @@ def test_error_no_frontmatter(wiki: Path):
     assert "ERROR" in proc.stderr and "bare.md" in proc.stderr
 
 
+def test_frontmatter_wikilinks_are_clean(wiki: Path):
+    write_page(
+        wiki,
+        "notes/ref.md",
+        '---\ntype: note\ndescription: D\nrelated:\n  - "[[concepts/mcp]]"\nanswer_doc: null\n'
+        'sources_cited: ["[[sources/alpha]]"]\nspawned_by_question: "[[questions/what-is-mcp]]"\n'
+        'repo: "[[repos/demo-repo/overview]]"\nsources:\n  - { id: raw, resource: ../../raw/alpha.md }\n---\n\nBody\n',
+    )
+    proc = run("build_index_md.py", "--wiki-dir", str(wiki))
+    assert proc.stderr == ""
+
+
+def test_body_wikilink_still_warns_with_clean_frontmatter(wiki: Path):
+    write_page(wiki, "notes/b.md", '---\ntype: note\ndescription: D\nrelated: ["[[concepts/mcp]]"]\n---\nSee [[concepts/mcp]].\n')
+    proc = run("build_index_md.py", "--wiki-dir", str(wiki))
+    assert "[[wikilink]] in body" in proc.stderr and "migration hint" not in proc.stderr
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "---\ntype: note\ndescription: D\nrelated:\n  - /concepts/mcp.md\n---\n",
+        "---\ntype: note\ndescription: D\nanswer_doc: /notes/x.md\n---\n",
+        "---\ntype: note\ndescription: D\nrepo: /repos/r/ARCHITECTURE.md\n---\n",
+        "---\ntype: note\ndescription: D\nspawned_by_question: /questions/q.md\n---\n",
+        "---\ntype: note\ndescription: D\nsources_cited: [/concepts/mcp.md]\n---\n",
+        "---\ntype: source\ndescription: D\nentities: [[entities/x]]\n---\n",
+    ],
+)
+def test_legacy_reference_values_warn_as_migration_hint(wiki: Path, text: str):
+    write_page(wiki, "notes/l.md", text)
+    proc = run("build_index_md.py", "--wiki-dir", str(wiki))
+    assert "WARN:" in proc.stderr and "migration hint" in proc.stderr
+    assert "ERROR" not in proc.stderr
+
+
 @pytest.mark.parametrize(
     "text,needle",
     [
@@ -180,12 +216,34 @@ def test_threshold_legacy_wikilink_form(wiki: Path):
         p.write_text(
             p.read_text()
             # v0.1 wikis quoted wikilinks (an unquoted `[[x]]` is a nested YAML list)
-            .replace("/entities/claude-code.md", '"[[wiki/entities/legacy-ent]]"')
-            .replace("/concepts/mcp.md", '"[[wiki/concepts/legacy-con|label]]"')
+            .replace('"[[entities/claude-code]]"', '"[[wiki/entities/legacy-ent]]"')
+            .replace('"[[concepts/mcp]]"', '"[[wiki/concepts/legacy-con|label]]"')
         )
     out = mentions(wiki)
     assert "legacy-ent" in out["qualifying"]["entities"]
     assert "legacy-con" in out["qualifying"]["concepts"]
+
+
+def test_threshold_legacy_path_form(wiki: Path):
+    for name in ("alpha", "beta"):
+        p = wiki / f"wiki/sources/{name}.md"
+        p.write_text(
+            p.read_text()
+            .replace('"[[entities/claude-code]]"', "/entities/legacy-ent.md")
+            .replace('"[[concepts/mcp]]"', "/concepts/legacy-con.md")
+        )
+    out = mentions(wiki)
+    assert "legacy-ent" in out["qualifying"]["entities"]
+    assert "legacy-con" in out["qualifying"]["concepts"]
+
+
+def test_threshold_scalar_and_unquoted_forms(wiki: Path):
+    # a scalar value and an unquoted [[x]] (a nested YAML list) must not crash or miscount
+    write_page(wiki, "sources/gamma.md", "---\ntype: source\nentities: [[entities/gamma-ent]]\nconcepts: \"[[concepts/mcp]]\"\n---\n")
+    write_page(wiki, "sources/delta.md", "---\ntype: source\nentities:\n  - [[entities/gamma-ent]]\n---\n")
+    out = mentions(wiki)
+    assert "gamma-ent" in out["qualifying"]["entities"]
+    assert len(out["concepts"]["mcp"]) == 4
 
 
 def test_single_mention_does_not_qualify(wiki: Path):

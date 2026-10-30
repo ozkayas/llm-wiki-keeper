@@ -34,7 +34,7 @@ You receive no `now` input.
 | `mode` | `architecture` or `question`. |
 | `question` | *(question mode)* The user's question, verbatim. |
 | `architecture_path` | *(question mode)* The repo's `ARCHITECTURE.md` — read it first; it may already answer. |
-| `question_page` | *(question mode)* The bundle-relative path of the question page that spawned this note (`/questions/<date>-<slug>.md`). |
+| `question_page` | *(question mode)* The question page that spawned this note, as a quoted wikilink (`"[[questions/<date>-<slug>]]"`). |
 | `language` | Page language, from `config.yml` (e.g. `en`). Write all prose in it. Slugs, keys and code stay as specified. |
 | `tags` | `optional` or `forbidden`, from `config.yml`. You **never invent tags**, in either mode. `optional`: keep any `tags:` already on an existing page when rewriting. `forbidden`: write none and drop any present. |
 
@@ -75,7 +75,7 @@ You receive no `now` input.
    `classDiagram` for a type family. The diagram carries the *what*; the prose is
    only there for the *why*.
 5. **Fill `entities:` and `concepts:`** the same way `source_writer` does, as
-   bundle-relative paths (`/concepts/<slug>.md`) — the
+   quoted wikilinks (`"[[concepts/<slug>]]"`) — the
    ideas this codebase substantively implements, not every noun in it. This is
    what lets a repo corroborate a concept that notes and articles also mention.
 6. **Return the receipt** (identical shape to `source_writer`):

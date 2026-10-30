@@ -15,8 +15,10 @@ relative markdown links, one-sentence `description`, ISO-8601 instants) live in
   `timestamp`; bump `at` on every meaningful change. `created` is preserved.
 - Timestamps come from `date -u +%Y-%m-%dT%H:%M:%SZ` run at write time, never typed by hand (`CONVENTIONS.md` §5).
 - Never write `verified`, and never invent `tags`. Preserve unknown keys on rewrite.
-- Frontmatter path values are bundle-relative (`/concepts/mcp.md`); body links are
-  relative to the page (`../concepts/mcp.md`).
+- Frontmatter page-reference keys (`entities`, `concepts`, `related`, `answer_doc`, `sources_cited`,
+  `spawned_by_question`, `repo`) hold quoted wikilinks relative to the bundle root, no leading slash,
+  no `.md`: `"[[concepts/mcp]]"`. `sources[].resource` is not one of them and stays a relative path or URL.
+  Body links stay standard markdown, relative to the page (`../concepts/mcp.md`); no wikilinks in bodies.
 - Claims carry a footnote `[^id]` whose id is a `sources[].id`; `> Synthesis:` lines carry none.
 - **Synthesis.** Any interpretation, comparison, evaluation or inference that the cited material does not state outright goes on its own line starting `> Synthesis:`, on every page type including overview and notes. Plain prose carries only sourced statements. A footnote supports only what its source states; a claim that combines two sources needs both footnotes; never attribute a detail (a protocol, a database, a number) to a source that does not mention it.
 - **Anchors point at the heading text, percent-encoded, as Obsidian expects** (not a GitHub slug): `../../raw/my-note.md#6.%20Building%20the%20Server`. Spaces become `%20`, other characters stay as in the heading, and `)` and `%` are encoded too (`%29`, `%25`).
@@ -51,9 +53,9 @@ sources:
   # article origin only, a second entry:
   # - { id: web, resource: <url>, title: <title>, author: <name>, last_modified: <date if known> }
 entities:
-  - /entities/<slug>.md
+  - "[[entities/<slug>]]"
 concepts:
-  - /concepts/<slug>.md
+  - "[[concepts/<slug>]]"
 ---
 
 # <title>
@@ -119,10 +121,10 @@ sources:
     resource: ../../raw/agent-loops.md
     title: Agent loops in practice
 entities:
-  - /entities/claude-code.md
+  - "[[entities/claude-code]]"
 concepts:
-  - /concepts/agent-loop.md
-  - /concepts/mcp.md
+  - "[[concepts/agent-loop]]"
+  - "[[concepts/mcp]]"
 ---
 
 # Agent loops in practice
@@ -166,7 +168,7 @@ shows three runs where a missing budget turned a ten-minute task into an hour.[^
 }
 ```
 
-`*_referenced` are the slugs actually listed in the frontmatter paths (promissory
+`*_referenced` are the slugs actually listed in the frontmatter wikilinks (promissory
 ones included) — this is what the ≥2 threshold counts. Be conservative: a passing
 mention is not an engagement.
 
@@ -196,7 +198,7 @@ sources:
     resource: ../sources/<source-slug-2>.md
     title: <source title>
 related:
-  - /concepts/<slug>.md
+  - "[[concepts/<slug>]]"
 source_count: <int>
 ---
 
@@ -251,7 +253,7 @@ sources:
     resource: ../sources/tool-servers.md
     title: Writing tool servers
 related:
-  - /concepts/agent-loop.md
+  - "[[concepts/agent-loop]]"
 source_count: 2
 ---
 
@@ -504,7 +506,7 @@ sources:
     title: acme/tinyagent
 entities: []
 concepts:
-  - /concepts/agent-loop.md
+  - "[[concepts/agent-loop]]"
 ---
 
 # tinyagent — Architecture
@@ -548,10 +550,10 @@ description: <ONE sentence — why this mattered>
 created: <ISO-8601 UTC>
 generated: { by: llm-wiki-keeper/orchestrator, at: <ISO-8601 UTC> }
 asked_on: <YYYY-MM-DD>
-answer_doc: /notes/<slug>.md     # or a repo note path, or null
+answer_doc: "[[notes/<slug>]]"     # or a repo note, or null
 sources_cited:
-  - /concepts/<slug>.md
-  - /sources/<slug>.md
+  - "[[concepts/<slug>]]"
+  - "[[sources/<slug>]]"
 ---
 
 # <question, verbatim>
@@ -572,7 +574,7 @@ Full answer: [<note title>](../notes/<slug>.md)
 <one sentence>
 ```
 
-`answer_doc` and `sources_cited` hold bundle-relative paths (data, like `entities:`),
+`answer_doc` and `sources_cited` hold quoted wikilinks (like `entities:`),
 so no `sources` list and no footnotes here.
 
 **Budget** ≤25 lines. **No diagrams, no code, no per-claim citations** — if you are
@@ -588,10 +590,10 @@ description: Checking whether the notes explain runaway tool retries.
 created: 2026-10-28T11:00:00Z
 generated: { by: llm-wiki-keeper/orchestrator, at: 2026-10-28T11:00:00Z }
 asked_on: 2026-10-28
-answer_doc: /notes/agent-loop-stop-conditions.md
+answer_doc: "[[notes/agent-loop-stop-conditions]]"
 sources_cited:
-  - /concepts/agent-loop.md
-  - /sources/agent-loops.md
+  - "[[concepts/agent-loop]]"
+  - "[[sources/agent-loops]]"
 ---
 
 # Why do agent loops need a step budget?
@@ -623,13 +625,13 @@ description: <ONE sentence>
 created: <ISO-8601 UTC — preserved across enrichment>
 generated: { by: llm-wiki-keeper/orchestrator, at: <ISO-8601 UTC> }
 spawned_by_question:
-  - /questions/<date>-<slug>.md
+  - "[[questions/<date>-<slug>]]"
 sources:
   - id: <page-slug>
     resource: ../concepts/<page-slug>.md     # or ../sources/..., ../entities/...
     title: <page title>
 related:
-  - /concepts/<slug>.md
+  - "[[concepts/<slug>]]"
 ---
 
 # <title>
@@ -657,7 +659,7 @@ description: Why an agent loop needs a step budget and what the notes say about 
 created: 2026-10-28T11:00:00Z
 generated: { by: llm-wiki-keeper/orchestrator, at: 2026-10-28T11:00:00Z }
 spawned_by_question:
-  - /questions/2026-10-28-why-agent-loops-need-a-step-budget.md
+  - "[[questions/2026-10-28-why-agent-loops-need-a-step-budget]]"
 sources:
   - id: agent-loop
     resource: ../concepts/agent-loop.md
@@ -666,7 +668,7 @@ sources:
     resource: ../sources/agent-loops.md
     title: Agent loops in practice
 related:
-  - /concepts/mcp.md
+  - "[[concepts/mcp]]"
 ---
 
 # Agent loop stop conditions
@@ -695,10 +697,10 @@ description: <ONE sentence>
 created: <ISO-8601 UTC>
 generated: { by: llm-wiki-keeper/repo_writer, at: <ISO-8601 UTC> }
 original_path: github://<owner>/<repo>#<question-slug>
-repo: /repos/github-<owner>-<repo>/ARCHITECTURE.md
+repo: "[[repos/github-<owner>-<repo>/ARCHITECTURE]]"
 commit_sha: <full sha>
 question: <the user's question, verbatim>
-spawned_by_question: /questions/<date>-<slug>.md
+spawned_by_question: "[[questions/<date>-<slug>]]"
 sources:
   - id: repo
     resource: https://github.com/<owner>/<repo>/tree/<commit_sha>
@@ -745,17 +747,17 @@ description: tinyagent stops on a fixed step budget checked once per model call.
 created: 2026-10-28T11:30:00Z
 generated: { by: llm-wiki-keeper/repo_writer, at: 2026-10-28T11:30:00Z }
 original_path: github://acme/tinyagent#how-it-stops
-repo: /repos/github-acme-tinyagent/ARCHITECTURE.md
+repo: "[[repos/github-acme-tinyagent/ARCHITECTURE]]"
 commit_sha: 9f2c1ab7d3e4f5061728394a5b6c7d8e9f001122
 question: How does tinyagent decide to stop the loop?
-spawned_by_question: /questions/2026-10-28-how-does-tinyagent-stop.md
+spawned_by_question: "[[questions/2026-10-28-how-does-tinyagent-stop]]"
 sources:
   - id: repo
     resource: https://github.com/acme/tinyagent/blob/9f2c1ab7d3e4f5061728394a5b6c7d8e9f001122/src/agent.py#L10-L28
     title: src/agent.py
 entities: []
 concepts:
-  - /concepts/agent-loop.md
+  - "[[concepts/agent-loop]]"
 ---
 
 # How tinyagent stops its loop

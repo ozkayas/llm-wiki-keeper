@@ -9,9 +9,9 @@ sources:
     resource: ../../raw/beta.md
     title: Beta note
 entities:
-  - /entities/claude-code.md
+  - "[[entities/claude-code]]"
 concepts:
-  - /concepts/mcp.md
+  - "[[concepts/mcp]]"
 ---
 
 # Beta note

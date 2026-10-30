@@ -46,8 +46,8 @@ You receive no `now` input.
    `type: source`, `title`, one-sentence `description`, `created`,
    `generated: { by: llm-wiki-keeper/source_writer, at: <output of `date -u +%Y-%m-%dT%H:%M:%SZ`> }`, a `sources`
    list (`id: raw` pointing at the raw file; for `article` origin a second entry
-   `id: web` with the URL), and `entities:` / `concepts:` as bundle-relative paths
-   (`/entities/<slug>.md`). Body links are standard relative markdown links
+   `id: web` with the URL), and `entities:` / `concepts:` as quoted wikilinks
+   (`"[[entities/<slug>]]"`, relative to `wiki/`, no `.md`). Body links are standard relative markdown links
    (`../concepts/<slug>.md`), never `[[wikilinks]]`. Every claim carries a footnote
    `[^raw]` (or `[^web]`) defined at the end of the page and linking the raw file
    with a **heading-text anchor**, percent-encoded as Obsidian expects
@@ -69,7 +69,7 @@ You receive no `now` input.
 ```
 
 `*_referenced` holds slugs and is what the orchestrator counts against the ≥2
-threshold, so it must match the paths in your frontmatter exactly (`/concepts/mcp.md`
+threshold, so it must match the wikilinks in your frontmatter exactly (`"[[concepts/mcp]]"`
 becomes `mcp`), including promissory links to pages that do not exist yet.
 
 ## Guardrails

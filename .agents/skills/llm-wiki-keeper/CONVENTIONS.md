@@ -60,22 +60,22 @@ A **source-like page** is a page written directly from one ingested artifact.
 In layer 01 that is exactly `wiki/sources/*.md`.
 
 Every source-like page declares, in its frontmatter, the pages it substantively
-engages with, as **bundle-relative paths** (start with `/`, end in `.md`):
+engages with, as **quoted wikilinks relative to the bundle root** (no leading slash, no `.md`, no `wiki/` prefix):
 
 ```yaml
 entities:
-  - /entities/claude-code.md
+  - "[[entities/claude-code]]"
 concepts:
-  - /concepts/mcp.md
+  - "[[concepts/mcp]]"
 ```
 
 > **An entity or concept page exists if and only if ≥2 distinct source-like
 > pages list it.**
 
 `scripts/count_mentions.py` is the single source of truth for that count — never
-eyeball it. It derives the slug from the path (`/concepts/mcp.md` gives `mcp`).
-These lists are data for the script, not links a reader follows; the path is the
-identity. One note mentioning something is a fact about that note; two notes
+eyeball it. It derives the slug from the last path segment (`"[[concepts/mcp]]"` gives `mcp`).
+These keys are wikilinks so they are clickable in Obsidian's Properties panel (MIGRATION §14);
+the path is the identity. One note mentioning something is a fact about that note; two notes
 mentioning it is a fact about your knowledge, and that is what earns a page.
 
 **Promissory links.** A source-like page may link `[MCP](../concepts/<slug>.md)`
@@ -106,7 +106,7 @@ into `raw/assets/`, keeping the filename. Because `raw/assets/` is then a siblin
 of `raw/<slug>.md`, the embed keeps resolving inside the wiki exactly as it did in
 the source folder — no link rewriting, and `raw/` stays a verbatim copy. (Raw files
 are verbatim, so Obsidian embeds inside them are fine; the no-wikilink rule in §6
-applies to what the skill writes under `wiki/`.)
+applies to page bodies the skill writes under `wiki/`.)
 
 Attachments are **not sources**: no wiki page, no `entities:`/`concepts:`, no
 count toward the ≥2 threshold. They are payload the source page may point at.
@@ -139,8 +139,8 @@ description: One sentence.         # required by this skill; the only thing the 
 created: 2026-10-28T09:00:00Z      # extra key (OKF allows them); set once, preserved across rewrites
 generated: { by: llm-wiki-keeper/source_writer, at: 2026-10-28T09:00:00Z }
 sources: [...]                     # §6
-entities: [/entities/claude-code.md]   # source-like pages only (§3)
-concepts: [/concepts/mcp.md]           # source-like pages only (§3)
+entities: ["[[entities/claude-code]]"]   # source-like pages only (§3)
+concepts: ["[[concepts/mcp]]"]           # source-like pages only (§3)
 status: stable                     # optional: draft | stable | deprecated. Absent means stable.
 stale_after: 2027-01-01T00:00:00Z  # optional, absolute instant
 tags: [a, b]                       # optional
@@ -176,8 +176,12 @@ tags: [a, b]                       # optional
   catches it as an `unparseable YAML frontmatter` error.
 - **Unknown keys are preserved** when a page is rewritten (`aliases`, `related`,
   human additions).
-- Frontmatter paths (`entities:`, `concepts:`, and the per-type path keys in
-  `PAGES.md`) are bundle-relative, start with `/`, end in `.md`, and need no quoting.
+- Frontmatter page-reference keys (`entities`, `concepts`, `related`, `answer_doc`,
+  `sources_cited`, `spawned_by_question`, `repo`) hold **quoted wikilinks**, as a string or a
+  list of strings: `"[[concepts/mcp]]"`. The path is relative to the bundle root (`wiki/`), with no
+  leading slash, no `.md` and no `wiki/` prefix; Obsidian resolves by path suffix, so it works
+  whatever the vault root is. Quote them: unquoted `[[x]]` is a nested YAML list. `sources[].resource`
+  is OKF-defined and stays a relative path or URL.
 
 Full per-type contracts: `PAGES.md`.
 
@@ -194,7 +198,7 @@ Full per-type contracts: `PAGES.md`.
 - Link text is a human title, never the path.
 - **Anchors point at the heading text, percent-encoded, as Obsidian expects** (not a GitHub slug): `../../raw/my-note.md#6.%20Building%20the%20Server`. Spaces become `%20`, other characters stay as in the heading, and `)` and `%` are encoded too (`%29`, `%25`).
 - External links: `[title](https://...)`.
-- Frontmatter path lists (§5) are the one place bundle-relative `/x.md` is used.
+- Frontmatter reference keys (§5) are the one place the skill emits wikilinks; bodies never do.
 
 **Provenance** is the frontmatter `sources` list plus footnotes in the body.
 
@@ -311,15 +315,21 @@ Divergences that remain, deliberately:
 1. `created` is an extra, producer-defined key (OKF allows extra keys).
 2. Links are **relative** (`../concepts/x.md`), not OKF's recommended bundle-absolute
    `/concepts/x.md`, so they resolve in Obsidian whatever the vault root is.
-   Frontmatter `entities:` / `concepts:` do use bundle-absolute paths.
+   Frontmatter page-reference keys (`entities`, `concepts`, `related`, `answer_doc`,
+   `sources_cited`, `spawned_by_question`, `repo`) are the exception: they are quoted
+   Obsidian wikilinks (`"[[concepts/x]]"`) so the Properties panel can click them.
+   A producer-defined extension, allowed by OKF §4.1 (MIGRATION §14).
 3. The bold operation word in the log is always written (OKF: convention).
 4. `raw/` lives outside the bundle and is linked into it by `../../raw/...`.
 5. `config.yml` lives outside the bundle; it is not an OKF concept.
 6. Promissory links to pages that do not exist yet are used on purpose (OKF tolerates them).
+7. The frontmatter page-reference keys hold quoted wikilinks, the only place this skill emits
+   them (see item 2 and MIGRATION §14).
 
 `build_index_md.py` checks conformance on every run: a page with no `type` is an
 error (non-zero exit), a missing `description` or a malformed log heading is a
-warning on stderr.
+warning on stderr. A reference key holding a legacy path (`/x/y.md`) instead of a quoted
+wikilink is a warning too, worded as a migration hint.
 
 <!-- changed in keeper: OKF 0.2 -->
 ## 10a. `config.yml`
@@ -477,3 +487,12 @@ Query-path pages (`questions/`, `notes/`, `open-questions.md`) carry
    in source mode.
 2. Provenance is per section, not per sentence.
 3. Text anchors do not scroll on GitHub. They do in Obsidian.
+4. Obsidian's Properties panel cannot render nested YAML (`generated`, `sources`): they show as
+   raw orange JSON.
+5. Standard markdown links and plain paths are not clickable in frontmatter; only wikilinks are.
+   That is why the reference keys use wikilinks.
+6. `sources[].resource` paths in frontmatter are therefore not clickable either, by design,
+   because OKF defines them.
+
+The Obsidian setting Settings > Editor > "Properties in document" = Hidden or Source removes
+the visual noise.

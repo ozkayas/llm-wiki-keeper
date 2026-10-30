@@ -9,10 +9,10 @@ sources:
     resource: ../../raw/alpha.md
     title: Alpha note
 entities:
-  - /entities/claude-code.md
-  - /entities/solo-tool.md
+  - "[[entities/claude-code]]"
+  - "[[entities/solo-tool]]"
 concepts:
-  - /concepts/mcp.md
+  - "[[concepts/mcp]]"
 ---
 
 # Alpha note

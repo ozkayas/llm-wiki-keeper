@@ -48,6 +48,9 @@ LOG_HEADING_RE = re.compile(r"^## (\d{4}-\d{2}-\d{2})\s*$")
 ISO_TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})$")
 BY_RE = re.compile(r"^((human|process):\S+|[\w.-]+/[\w.-]+)$")
 STATUSES = {"draft", "stable", "deprecated"}
+# Page-reference keys: quoted wikilinks relative to the bundle root, e.g. "[[concepts/mcp]]" (MIGRATION section 14).
+REFERENCE_KEYS = ("entities", "concepts", "related", "answer_doc", "sources_cited", "spawned_by_question", "repo")
+WIKILINK_VALUE_RE = re.compile(r"^\[\[[^\[\]\n]+\]\]$")
 
 
 class _Loader(yaml.SafeLoader):
@@ -204,8 +207,18 @@ def check_page(rel: Path, state: str, fm: dict[str, Any], body: str, fatal: list
         warn.append(f"{rel}: legacy `timestamp` key - superseded by generated.at")
     if re.search(r"^#+\s+Citations\s*$", body, re.M):
         warn.append(f"{rel}: legacy `# Citations` heading - use `sources` + footnotes")
-    if re.search(r"\[\[[^\]\n]+\]\]", body):
+    if re.search(r"\[\[[^\]\n]+\]\]", body):  # body only: frontmatter reference keys are wikilinks on purpose
         warn.append(f"{rel}: [[wikilink]] in body - this skill emits standard markdown links")
+    for key in REFERENCE_KEYS:
+        value = fm.get(key)
+        for item in value if isinstance(value, list) else [value]:
+            if item is None:
+                continue
+            if not (isinstance(item, str) and WIKILINK_VALUE_RE.match(item.strip())):
+                warn.append(
+                    f'{rel}: `{key}` holds {item!r}, not a quoted wikilink - migration hint: write "[[concepts/x]]" '
+                    "(bundle-relative, no leading slash, no .md, quoted)"
+                )
     gen = fm.get("generated")
     if gen is not None:
         if not isinstance(gen, dict) or not str(gen.get("by") or "").strip():
