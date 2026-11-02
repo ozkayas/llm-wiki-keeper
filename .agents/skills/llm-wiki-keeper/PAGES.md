@@ -871,6 +871,7 @@ generated: { by: llm-wiki-keeper/orchestrator, at: <ISO-8601 UTC> }
 
 ## Suggested next ingests
 - <slug>: <why a second source would help (C04)>
+- Open questions: <n> added to open-questions.md, <m> already there.
 ```
 
 Omit a severity section when it is empty. **Budget:** no cap, but one line per finding.

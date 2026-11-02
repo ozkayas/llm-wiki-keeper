@@ -656,3 +656,24 @@ def test_l01_raw_pointer_and_attributed_quote_exempt(wiki: Path):
     _, data = lint(wiki)
     msgs = [f["message"] for f in of(data, "L01") if f["file"] == "wiki/notes/scratch.md"]
     assert len(msgs) == 1 and "no attribution" in msgs[0], msgs
+
+
+# ---------------------------------------------------------------- L16 (MIGRATION section 19) ---
+
+
+def report(wiki: Path, day: str = "2026-10-29", body: str = "- **C04 data-gap**: a gap.\n") -> None:
+    write(wiki, f"wiki/lint/{day}.md", page("lint_report", body=f"# Lint report {day}\n\n{body}"))
+
+
+def test_l16_report_with_c04_and_no_open_questions_warns(wiki: Path):
+    report(wiki)
+    _, data = lint(wiki)
+    assert [f["file"] for f in of(data, "L16")] == ["wiki/lint/2026-10-29.md"]
+
+
+def test_l16_quiet_when_section_exists_or_no_c04(wiki: Path):
+    report(wiki)
+    write(wiki, "wiki/open-questions.md", page("open_question", body="# Open questions\n\n## 2026-10-29\n\n- A gap. — flagged by lint (C04)\n"))
+    assert "L16" not in ids(lint(wiki)[1])
+    report(wiki, day="2026-10-30", body="Nothing to flag.\n")
+    assert "L16" not in ids(lint(wiki)[1])

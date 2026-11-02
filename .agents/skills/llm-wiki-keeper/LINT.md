@@ -56,6 +56,7 @@ else from the wiki at this point.
 | L13 | conformance | error/warn | The conformance results of `build_index_md.py`, severities kept. |
 | L14 | config-missing | info | No `config.yml`: defaults were used. |
 | L15 | timestamp-sanity | warn | `created` or `generated.at` in the future, or `created` later than `generated.at`. |
+| L16 | open-questions-missing | warn | The newest `wiki/lint/YYYY-MM-DD.md` mentions a C04 finding but `wiki/open-questions.md` has no `## YYYY-MM-DD` section: L.6 was skipped. Shows on the next lint run. |
 
 ## L.3: Review in groups
 
@@ -115,14 +116,27 @@ links. Links from the report to wiki pages are relative to `wiki/lint/`
 
 ## L.6: Open questions
 
-Only if there are C04 findings: append them to `wiki/open-questions.md` as dated
-bullets (append-only, bump `generated.at`, creating the file with `type: open_question`
-frontmatter on first use). The format is the one of `QUERY.md` Q.7, restated here so
-this file stands alone: under a `## <YYYY-MM-DD>` heading (newest section last, reuse
-today's if it exists), one bullet per finding, `- <the question or gap> — flagged by lint
-(C04)`, or `- <the question> — from [<page title>](<path>.md)` when a page prompted it
-(links relative to `wiki/`, so no `../`). If there are none, do not touch
-the file. Nothing else outside `lint/` is written.
+Only if there are C04 findings. Do not hand-edit `wiki/open-questions.md`: run the
+script on the reviewers' receipts (the scratch files from L.3 hold them; save each
+receipt you got to one) and **run it even if you doubt the findings matter**, the script
+decides what is new:
+
+```bash
+uv run --script .agents/skills/llm-wiki-keeper/scripts/append_open_questions.py --wiki-dir wiki-<slug> \
+  --findings <receipt-1.json> --findings <receipt-2.json>
+```
+
+It reads only the C04 findings, appends one bullet per gap under today's `## <YYYY-MM-DD>`
+heading (`- <gap> — from [<page title>](<path>.md)` when the finding names a page, else
+`- <gap> — flagged by lint (C04)`; the `QUERY.md` Q.7 format), skips a gap that is already in
+the file, bumps `generated.at` (from the clock, never typed by hand), creates the file with
+`type: open_question` frontmatter if missing, and writes nothing when there are no C04
+findings. It prints `{c04, added, skipped, created}`.
+
+Put the result in the report (L.5) under `## Suggested next ingests`: the line
+`Open questions: <added> added to open-questions.md, <skipped> already there.` With
+no C04 findings, write nothing here. If you skip this step, the next lint run reports L16.
+Nothing else outside `lint/` is written.
 
 ## L.7: Log and index
 

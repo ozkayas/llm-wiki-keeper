@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = ["pyyaml>=6.0"]
 # ///
-"""Deterministic lint for a wiki bundle (OKF v0.2, MIGRATION section 16.1, checks L01-L15).
+"""Deterministic lint for a wiki bundle (OKF v0.2, MIGRATION section 16.1, checks L01-L16).
 
 Read-only: nothing is written to the wiki, no network. L10 and L13 run `build_index_md.py`
 (sibling script, subprocess) on a temporary COPY of `wiki/`.
@@ -682,6 +682,26 @@ def check_l15(ctx: Ctx) -> None:
                     "created never changes; generated.at must be equal or later")
 
 
+REPORT_NAME_RE = re.compile(r"^wiki/lint/(\d{4}-\d{2}-\d{2})\.md$")
+
+
+def check_l16(ctx: Ctx) -> None:
+    """The newest lint report lists a C04 finding, but open-questions.md has no section for its date."""
+    reports = sorted((m.group(1), p) for p in ctx.pages if (m := REPORT_NAME_RE.match(p.rel)))
+    if not reports:
+        return
+    day, page = reports[-1]
+    hit = next((n for n, line in page.body() if re.search(r"\bC04\b", line)), None)
+    if hit is None:
+        return
+    oq = ctx.bundle / "open-questions.md"
+    text = oq.read_text(errors="replace") if oq.is_file() else ""
+    if re.search(rf"^## {day}\s*$", text, re.M):
+        return
+    ctx.add("L16", "warn", page.rel, hit, f"the report lists C04 findings but open-questions.md has no `## {day}` section",
+            "run append_open_questions.py with the reviewers' findings (LINT.md L.6)")
+
+
 # ------------------------------------------------------------------ main ---
 
 
@@ -720,6 +740,7 @@ def lint(wiki_dir: Path, now: datetime) -> tuple[list[dict[str, Any]], dict[str,
     check_l11(ctx)
     check_l12(ctx)
     check_l15(ctx)
+    check_l16(ctx)
     seen, unique = set(), []
     for f in ctx.findings:
         key = json.dumps(f, sort_keys=True)
