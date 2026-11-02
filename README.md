@@ -1,6 +1,6 @@
 # llm-wiki-keeper
 
-An agent skill that builds and queries an LLM-maintained wiki (ingest, query).
+An agent skill that builds, queries and lints an LLM-maintained wiki (ingest, query, lint), in OKF v0.2.
 
 This is a derivative of **03-llm-wiki-interactive** from the
 [LLM Wiki Workshop](https://github.com/decodingai-magazine/llm-wiki-workshop)
@@ -17,10 +17,11 @@ MIT License. The idea behind it is Andrej Karpathy's
 
 The first commit is the unmodified upstream skill, so `git diff` shows every change made here.
 
-Planned:
+1. Wiki format moved from OKF v0.1 to OKF v0.2 (`generated`, `sources` + footnotes, `status`, newest-first log, standard markdown links, wikilinks in frontmatter path lists).
+2. Added a `lint` mode (Karpathy's third operation): deterministic `scripts/lint.py` plus LLM `lint_reviewer` agents; see `LINT.md`.
+3. First run asks for preferences once and stores them in `wiki-<slug>/config.yml`.
 
-1. Move the wiki format from OKF v0.1 to OKF v0.2.
-2. Add a `lint` mode (Karpathy's third operation, next to ingest and query).
+Every decision and its reason is recorded in `MIGRATION-OKF-0.2.md`.
 
 ## Layout
 
